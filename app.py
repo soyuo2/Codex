@@ -205,6 +205,23 @@ st.markdown(
         padding: 0.35rem 0.35rem;
         box-shadow: 0 14px 40px rgba(29, 54, 104, 0.05);
         margin-bottom: 1rem;
+        color: #1f2a44 !important;
+    }
+
+    [data-testid="stChatMessage"] * {
+        color: #1f2a44 !important;
+    }
+
+    [data-testid="stChatMessage"] p,
+    [data-testid="stChatMessage"] li,
+    [data-testid="stChatMessage"] span,
+    [data-testid="stChatMessage"] div,
+    [data-testid="stMarkdownContainer"],
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] li,
+    [data-testid="stMarkdownContainer"] span,
+    [data-testid="stMarkdownContainer"] div {
+        color: #1f2a44 !important;
     }
 
     [data-testid="stChatInput"] {
@@ -225,6 +242,13 @@ st.markdown(
         border: 1px solid #d6e1f2;
         min-height: 46px;
         font-weight: 700;
+    }
+
+    .st-emotion-cache-janbn0,
+    .st-emotion-cache-janbn0 p,
+    .st-emotion-cache-janbn0 span,
+    .st-emotion-cache-janbn0 div {
+        color: #1f2a44 !important;
     }
     </style>
     """,
