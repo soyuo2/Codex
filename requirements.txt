@@ -4,5 +4,3 @@ langchain-community
 langchain-google-genai
 faiss-cpu
 sentence-transformers
-pypdf
-langchain-text-splitters
