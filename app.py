@@ -5,23 +5,23 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
-from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 INDEX_DIR = DATA_DIR / "vectorstores"
 CHAT_LOG_DIR = DATA_DIR / "chat_logs"
-PDF_DIR = BASE_DIR
+KNOWLEDGE_BASE_DIR = BASE_DIR / "knowledge_base"
+DEFAULT_JSONL_NAME = "gsm_guide_rag_chunks.jsonl"
 
-for directory in [DATA_DIR, INDEX_DIR, CHAT_LOG_DIR]:
+for directory in [DATA_DIR, INDEX_DIR, CHAT_LOG_DIR, KNOWLEDGE_BASE_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 
@@ -212,15 +212,8 @@ st.markdown(
         color: #1f2a44 !important;
     }
 
-    [data-testid="stChatMessage"] p,
-    [data-testid="stChatMessage"] li,
-    [data-testid="stChatMessage"] span,
-    [data-testid="stChatMessage"] div,
     [data-testid="stMarkdownContainer"],
-    [data-testid="stMarkdownContainer"] p,
-    [data-testid="stMarkdownContainer"] li,
-    [data-testid="stMarkdownContainer"] span,
-    [data-testid="stMarkdownContainer"] div {
+    [data-testid="stMarkdownContainer"] * {
         color: #1f2a44 !important;
     }
 
@@ -236,19 +229,12 @@ st.markdown(
         padding-top: 0.9rem !important;
     }
 
-    .stButton > button, .stDownloadButton > button {
+    .stButton > button {
         width: 100%;
         border-radius: 14px;
         border: 1px solid #d6e1f2;
         min-height: 46px;
         font-weight: 700;
-    }
-
-    .st-emotion-cache-janbn0,
-    .st-emotion-cache-janbn0 p,
-    .st-emotion-cache-janbn0 span,
-    .st-emotion-cache-janbn0 div {
-        color: #1f2a44 !important;
     }
     </style>
     """,
@@ -256,20 +242,40 @@ st.markdown(
 )
 
 
-def find_source_pdfs() -> list[Path]:
-    return sorted(
-        [path for path in PDF_DIR.glob("*.pdf") if path.is_file()],
-        key=lambda item: item.name.lower(),
-    )
+def find_source_jsonl() -> Path | None:
+    candidate_paths = [
+        KNOWLEDGE_BASE_DIR / DEFAULT_JSONL_NAME,
+        BASE_DIR / DEFAULT_JSONL_NAME,
+    ]
+    for path in candidate_paths:
+        if path.exists() and path.is_file():
+            return path
+
+    for path in sorted(KNOWLEDGE_BASE_DIR.glob("*.jsonl")):
+        if path.is_file():
+            return path
+
+    for path in sorted(BASE_DIR.glob("*.jsonl")):
+        if path.is_file():
+            return path
+
+    for path in sorted(BASE_DIR.rglob(DEFAULT_JSONL_NAME)):
+        if path.is_file():
+            return path
+
+    for path in sorted(BASE_DIR.rglob("*.jsonl")):
+        if path.is_file():
+            return path
+
+    return None
 
 
-def build_pdf_set_signature(pdf_paths: list[Path]) -> str:
+def build_data_signature(data_path: Path) -> str:
+    file_bytes = data_path.read_bytes()
     digest = hashlib.sha256()
-    for path in pdf_paths:
-        file_bytes = path.read_bytes()
-        digest.update(path.name.encode("utf-8"))
-        digest.update(str(path.stat().st_size).encode("utf-8"))
-        digest.update(hashlib.sha256(file_bytes).digest())
+    digest.update(data_path.name.encode("utf-8"))
+    digest.update(str(data_path.stat().st_size).encode("utf-8"))
+    digest.update(hashlib.sha256(file_bytes).digest())
     return digest.hexdigest()
 
 
@@ -278,17 +284,37 @@ def get_embeddings():
     return HuggingFaceEmbeddings(model_name="jhgan/ko-sroberta-multitask")
 
 
-def load_documents_from_pdfs(pdf_paths: list[Path]):
+def load_documents_from_jsonl(jsonl_path: Path) -> tuple[list[Document], int]:
     documents = []
-    for pdf_path in pdf_paths:
-        loader = PyPDFLoader(str(pdf_path))
-        documents.extend(loader.load())
-    return documents
+    with jsonl_path.open("r", encoding="utf-8") as file:
+        for line in file:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            text = str(row.get("text") or row.get("answer") or "").strip()
+            if not text:
+                continue
+
+            metadata = {
+                "chunk_id": row.get("chunk_id", ""),
+                "respondent_id": row.get("respondent_id", ""),
+                "category": row.get("category", ""),
+                "question": row.get("question", ""),
+                "question_key": row.get("question_key", ""),
+                "major": row.get("major", ""),
+                "cohort_or_grade": row.get("cohort_or_grade", ""),
+                "current_status": row.get("current_status", ""),
+                "tags": ", ".join(row.get("tags", [])) if isinstance(row.get("tags"), list) else str(row.get("tags", "")),
+                "source_row": row.get("source_row", ""),
+            }
+            documents.append(Document(page_content=text, metadata=metadata))
+
+    return documents, len(documents)
 
 
 @st.cache_resource(show_spinner=False)
-def get_retriever(signature: str, pdf_paths_as_str: tuple[str, ...]):
-    pdf_paths = [Path(path) for path in pdf_paths_as_str]
+def get_retriever(signature: str, jsonl_path_str: str):
+    jsonl_path = Path(jsonl_path_str)
     embeddings = get_embeddings()
     index_path = INDEX_DIR / signature
 
@@ -299,14 +325,8 @@ def get_retriever(signature: str, pdf_paths_as_str: tuple[str, ...]):
             allow_dangerous_deserialization=True,
         )
     else:
-        raw_documents = load_documents_from_pdfs(pdf_paths)
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=900,
-            chunk_overlap=150,
-            separators=["\n\n", "\n", ".", " ", ""],
-        )
-        split_documents = splitter.split_documents(raw_documents)
-        vectorstore = FAISS.from_documents(split_documents, embeddings)
+        documents, _ = load_documents_from_jsonl(jsonl_path)
+        vectorstore = FAISS.from_documents(documents, embeddings)
         vectorstore.save_local(str(index_path))
 
     return vectorstore.as_retriever(search_kwargs={"k": 4})
@@ -368,16 +388,6 @@ def load_chat_history(session_id: str) -> list[dict]:
         return []
 
 
-def export_chat_as_text(messages: list[dict]) -> str:
-    lines = []
-    for message in messages:
-        speaker = "사용자" if message["role"] == "user" else "길잡이 선배"
-        lines.append(f"[{speaker}]")
-        lines.append(message["content"])
-        lines.append("")
-    return "\n".join(lines).strip()
-
-
 def ensure_session_defaults():
     if "session_id" not in st.session_state:
         st.session_state.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -389,7 +399,7 @@ def ensure_session_defaults():
                 "role": "assistant",
                 "content": (
                     "안녕 후배야! 😊 학교 생활이나 프로젝트, 진로 고민이 있으면 편하게 물어봐. "
-                    "학교 자료를 바탕으로 선배처럼 친근하게 답해줄게."
+                    "준비된 상담 데이터와 학교 자료를 바탕으로 선배처럼 친근하게 답해줄게."
                 ),
             }
         ]
@@ -400,8 +410,11 @@ ensure_session_defaults()
 if "GOOGLE_API_KEY" in st.secrets:
     os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 
-pdf_paths = find_source_pdfs()
-pdf_signature = build_pdf_set_signature(pdf_paths) if pdf_paths else None
+jsonl_path = find_source_jsonl()
+data_signature = build_data_signature(jsonl_path) if jsonl_path else None
+chunk_count = 0
+if jsonl_path:
+    _, chunk_count = load_documents_from_jsonl(jsonl_path)
 
 with st.sidebar:
     st.markdown('<div class="sidebar-logo">GSM</div>', unsafe_allow_html=True)
@@ -423,7 +436,7 @@ with st.sidebar:
     st.markdown(
         """
         <div class="warning-card">
-            ⚠️ 답변은 준비된 학교 자료를 바탕으로 생성돼요.<br>
+            ⚠️ 답변은 준비된 상담 데이터와 학교 자료를 바탕으로 생성돼요.<br>
             중요한 결정은 꼭 직접 한 번 더 확인해 주세요.
         </div>
         """,
@@ -431,10 +444,21 @@ with st.sidebar:
     )
     st.markdown("---")
     st.markdown('<div class="section-chip">안내</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="info-box"><strong>바로 질문해 보세요.</strong><br>사용자는 질문만 입력하면 되고, 챗봇이 준비된 자료를 바탕으로 답변해요.</div>',
-        unsafe_allow_html=True,
-    )
+
+    if jsonl_path:
+        st.markdown(
+            (
+                '<div class="info-box"><strong>준비된 상담 데이터가 연결되어 있어요.</strong><br>'
+                f'현재 {chunk_count}개의 RAG 청크를 기반으로 답변하고 있어요.<br>'
+                f'데이터 파일: {jsonl_path.name}</div>'
+            ),
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="info-box"><strong>상담 데이터가 아직 연결되지 않았어요.</strong><br>관리자가 지식베이스 파일을 준비하면 바로 사용할 수 있어요.</div>',
+            unsafe_allow_html=True,
+        )
 
     saved_sessions = list_saved_chat_sessions()
     if saved_sessions:
@@ -466,14 +490,26 @@ with st.sidebar:
 
 
 retriever = None
-if pdf_paths:
+if jsonl_path:
     try:
         retriever = get_retriever(
-            pdf_signature,
-            tuple(str(path) for path in pdf_paths),
+            data_signature,
+            str(jsonl_path),
         )
     except Exception as error:
-        st.error(f"PDF 임베딩을 준비하는 중 오류가 발생했어요: {error}")
+        st.error(f"지식베이스를 준비하는 중 오류가 발생했어: {error}")
+
+if not jsonl_path:
+    st.error(
+        "지식베이스 파일을 찾지 못했어. "
+        "`gsm_guide_rag_chunks.jsonl` 파일이 프로젝트 안에 포함되어 있는지 확인해줘."
+    )
+
+if jsonl_path and not retriever:
+    st.error(
+        "지식베이스 파일은 찾았지만 임베딩이나 벡터 저장소를 준비하지 못했어. "
+        "배포 로그를 확인해서 구체적인 오류를 봐줘."
+    )
 
 
 llm = ChatGoogleGenerativeAI(
@@ -482,26 +518,20 @@ llm = ChatGoogleGenerativeAI(
     streaming=True,
 )
 
-system_prompt = """당신은 광주소프트웨어마이스터고(GSM)를 너무나 사랑하는 '유쾌하고 따뜻한 3학년 선배'입니다.
-후배가 질문을 하면, 아래 [참고 정보]를 꼼꼼히 읽은 뒤 **완벽하게 소화해서 선배의 언어로 재구성해** 대답해 주세요.
+system_prompt = """당신은 광주소프트웨어마이스터고(GSM)를 먼저 경험한 친근한 선배입니다.
+후배가 질문하면 아래 [참고 정보]를 바탕으로만 답하고, 자연스럽고 따뜻한 한국어로 설명하세요.
 
-[절대 지켜야 할 답변 규칙] 🚨
-1. 기계적인 나열 절대 금지: "정보에 따르면~", "다음과 같습니다.", "1번, 2번" 처럼 딱딱하게 번호를 매기며 로봇처럼 읽어주지 마세요.
-2. 자연스러운 스토리텔링: [참고 정보]의 문장들을 그대로 복사+붙여넣기 하지 마세요. 여러 선배들의 꿀팁을 하나로 자연스럽게 엮어서 "내가 경험해 보니까 이렇더라~" 하는 식으로 썰을 풀듯이 말해주세요.
-3. 완벽한 구어체 사용: "안녕 후배야!", "이건 진짜 꿀팁인데~", "다들 화이팅하자!" 처럼 친한 동네 형/누나/언니/오빠 같은 말투(반말과 해요체를 섞어서)를 사용하세요.
-4. 개인정보 차단: 이름, 이메일 등은 절대 언급하지 마세요.
-5. 모르는 질문 대처: 정보에 없는 내용을 물어보면 지어내지 말고 "앗, 그건 나도 잘 모르겠어! 다른 선배나 선생님께 여쭤보는 게 좋겠다ㅎㅎ"라고 쿨하게 넘기세요.
-6. **핵심 요약**: 답변 시작 부분에 한 줄로 핵심 요약을 해주세요.
-7. **가독성 강조**: 중요한 단어나 문구는 **굵게(Bold)** 표시하세요.
-8. **적절한 줄바꿈**: 문장이 너무 길어지지 않게 엔터(줄바꿈)를 자주 사용하세요.
-9. **이모지 활용**: 친근감을 위해 문장 끝에 적절한 이모지를 사용하세요.
-10. **구조화**: 내용이 많으면 '첫째, 둘째' 또는 '먼저, 그 다음은' 등의 표현을 써서 흐름을 만드세요.
-11. 관련성 : 질문에 관련 있는 내용만 답하고 나머지 팁은 추가 적인 팁으로 표현하거나 없애세요.
-12. **질문 우선순위**: 후배가 '백엔드', '공부법' 등 특정 주제를 물어보면 [참고 정보]에서 **그 주제와 직접 관련된 내용**을 최우선으로 찾아 답변하세요. 
-13. **불필요한 조언 금지**: 질문과 상관없는 '인간관계', '선배와 친해지기' 등의 일반적인 조언은 [참고 정보]에 해당 내용이 메인이 아니라면 언급하지 마세요.
-14. **구체적 수치/방법**: 데이터에 공부 사이트, 언어, 프레임워크 등이 있다면 생략하지 말고 정확하게 전달하세요.
+답변 규칙:
+1. 첫 줄에는 한 줄 요약을 적습니다.
+2. 기계적인 나열보다 실제 선배가 말하듯 자연스럽게 설명합니다.
+3. 중요한 표현은 **굵게** 표시합니다.
+4. 문장은 너무 길지 않게 나눕니다.
+5. 이름, 이메일 같은 개인정보는 반복하지 않습니다.
+6. 참고 정보에 없는 내용은 추측하지 말고 모른다고 말합니다.
+7. 질문과 직접 관련된 정보만 중심으로 답합니다.
+8. 사용자가 바로 실천할 수 있는 조언이 있으면 구체적으로 적습니다.
 
-[참고 정보]:
+[참고 정보]
 {context}"""
 
 prompt = ChatPromptTemplate.from_messages(
@@ -522,7 +552,7 @@ st.markdown(
         <div class="hero-subtitle">학교 생활, 프로젝트, 진로 고민까지! 선배가 다 알려줄게.</div>
         <div class="hero-badge">
             <span class="hero-icon">💬</span>
-            <span>안녕 후배야! 궁금한 게 있으면 편하게 물어봐. 준비된 학교 자료를 바탕으로 차근차근 답해줄게.</span>
+            <span>안녕 후배야! 궁금한 게 있으면 편하게 물어봐. 준비된 상담 데이터와 학교 자료를 바탕으로 차근차근 답해줄게.</span>
         </div>
     </div>
     """,
@@ -543,7 +573,7 @@ if user_input:
 
     with st.chat_message("assistant"):
         if not rag_chain:
-            response = "지금은 답변에 사용할 자료가 준비되지 않았어. 잠시 후 다시 시도해줘."
+            response = "지금은 답변에 사용할 상담 데이터가 준비되지 않았어. 잠시 후 다시 시도해줘."
             st.write(response)
         else:
             try:
