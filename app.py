@@ -429,13 +429,6 @@ with st.sidebar:
             st.session_state.messages = load_chat_history(selected_session_id)
             st.rerun()
 
-    st.download_button(
-        label="답변 기록 내려받기",
-        data=export_chat_as_text(st.session_state.messages),
-        file_name=f"gsm_chat_{st.session_state.session_id}.txt",
-        mime="text/plain",
-    )
-
     if st.button("새 대화 시작"):
         st.session_state.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [
