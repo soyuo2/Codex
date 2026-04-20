@@ -336,7 +336,7 @@ def ensure_session_defaults():
                 "role": "assistant",
                 "content": (
                     "안녕 후배야! 😊 학교 생활이나 프로젝트, 진로 고민이 있으면 편하게 물어봐. "
-                    "이 앱에 포함된 PDF 자료를 바탕으로 선배처럼 친근하게 답해줄게."
+                    "학교 자료를 바탕으로 선배처럼 친근하게 답해줄게."
                 ),
             }
         ]
@@ -370,26 +370,18 @@ with st.sidebar:
     st.markdown(
         """
         <div class="warning-card">
-            ⚠️ 답변은 프로젝트 안에 있는 PDF 자료를 바탕으로 생성돼요.<br>
+            ⚠️ 답변은 준비된 학교 자료를 바탕으로 생성돼요.<br>
             중요한 결정은 꼭 직접 한 번 더 확인해 주세요.
         </div>
         """,
         unsafe_allow_html=True,
     )
     st.markdown("---")
-    st.markdown('<div class="section-chip">연결된 지식베이스</div>', unsafe_allow_html=True)
-
-    if pdf_paths:
-        file_lines = "<br>".join([f"• {path.name}" for path in pdf_paths])
-        st.markdown(
-            f'<div class="info-box"><strong>현재 사용 중인 PDF</strong><br>{file_lines}</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            '<div class="info-box"><strong>PDF가 없어요.</strong><br>앱 폴더에 PDF 파일을 넣으면 자동으로 RAG에 연결돼요.</div>',
-            unsafe_allow_html=True,
-        )
+    st.markdown('<div class="section-chip">안내</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="info-box"><strong>바로 질문해 보세요.</strong><br>사용자는 질문만 입력하면 되고, 챗봇이 준비된 자료를 바탕으로 답변해요.</div>',
+        unsafe_allow_html=True,
+    )
 
     st.download_button(
         label="답변 기록 내려받기",
@@ -403,7 +395,7 @@ with st.sidebar:
         st.session_state.messages = [
             {
                 "role": "assistant",
-                "content": "새 대화를 시작했어! 😊 지금 연결된 PDF 기준으로 다시 도와줄게.",
+                "content": "새 대화를 시작했어! 😊 궁금한 걸 다시 편하게 물어봐.",
             }
         ]
         persist_chat_history(st.session_state.session_id, st.session_state.messages)
@@ -422,7 +414,7 @@ if pdf_paths:
 
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
+    model="gemini-3.1-flash-preview",
     temperature=0.6,
     streaming=True,
 )
@@ -463,7 +455,7 @@ st.markdown(
         <div class="hero-subtitle">학교 생활, 프로젝트, 진로 고민까지! 선배가 다 알려줄게.</div>
         <div class="hero-badge">
             <span class="hero-icon">💬</span>
-            <span>안녕 후배야! 궁금한 게 있으면 편하게 물어봐. 앱에 포함된 PDF 자료를 바탕으로 차근차근 답해줄게.</span>
+            <span>안녕 후배야! 궁금한 게 있으면 편하게 물어봐. 준비된 학교 자료를 바탕으로 차근차근 답해줄게.</span>
         </div>
     </div>
     """,
@@ -484,7 +476,7 @@ if user_input:
 
     with st.chat_message("assistant"):
         if not rag_chain:
-            response = "아직 프로젝트 폴더에 PDF가 없어서 답변할 자료가 없어. 앱 폴더에 PDF를 넣어주면 바로 도와줄게!"
+            response = "지금은 답변에 사용할 자료가 준비되지 않았어. 잠시 후 다시 시도해줘."
             st.write(response)
         else:
             try:
