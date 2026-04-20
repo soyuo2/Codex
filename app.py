@@ -6,7 +6,6 @@ from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -14,6 +13,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -28,7 +28,7 @@ for directory in [DATA_DIR, UPLOAD_DIR, INDEX_DIR, CHAT_LOG_DIR]:
 
 
 st.set_page_config(
-    page_title="GSM Guide Chatbot",
+    page_title="GSM 길잡이 챗봇",
     page_icon="G",
     layout="centered",
 )
@@ -47,8 +47,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("GSM Guide Chatbot")
-st.subheader("Upload PDF files, reuse embeddings later, and stream answers in real time.")
+st.title("GSM 길잡이 챗봇")
+st.subheader("PDF 자료를 올리면, 저장된 임베딩을 다시 활용해 실시간으로 답변해줘요.")
 
 
 def sanitize_filename(filename: str) -> str:
@@ -183,7 +183,7 @@ def ensure_session_defaults():
             {
                 "role": "assistant",
                 "content": (
-                    "Hello! Upload PDF files first. I will answer in Korean based only on those documents."
+                    "안녕! PDF 자료를 먼저 올려주면 그 내용을 바탕으로 한국어로 답변해줄게."
                 ),
             }
         ]
@@ -196,28 +196,28 @@ if "GOOGLE_API_KEY" in st.secrets:
 
 
 with st.sidebar:
-    st.title("Controls")
+    st.title("이용 안내")
     st.info(
         """
-        - Upload one or more PDF files.
-        - Embeddings are cached and reused for the same PDF set.
-        - Chat answers are automatically saved to local JSON files.
-        - You can also download the current chat as a text file.
+        - PDF 파일을 하나 이상 업로드할 수 있어요.
+        - 같은 PDF 조합은 임베딩을 저장해두고 다시 재사용해요.
+        - 대화와 답변은 자동으로 저장돼요.
+        - 현재 대화는 텍스트 파일로 내려받을 수 있어요.
         """
     )
 
     uploaded_files = st.file_uploader(
-        "Upload PDF files",
+        "PDF 파일 업로드",
         type=["pdf"],
         accept_multiple_files=True,
-        help="You can upload multiple PDF files at once.",
+        help="여러 개의 PDF 파일을 한 번에 업로드할 수 있어요.",
     )
 
     if uploaded_files:
         saved_pdf_paths = save_uploaded_files(uploaded_files)
         active_signature = build_pdf_set_signature(saved_pdf_paths)
         save_active_pdf_state(active_signature, saved_pdf_paths)
-        st.success(f"{len(saved_pdf_paths)} PDF file(s) ready.")
+        st.success(f"PDF {len(saved_pdf_paths)}개를 준비했어요.")
     else:
         active_state = load_active_pdf_state()
         active_signature = active_state["signature"] if active_state else None
@@ -232,23 +232,23 @@ with st.sidebar:
         )
 
     if saved_pdf_paths:
-        st.caption("Active PDFs")
+        st.caption("현재 연결된 PDF")
         for path in saved_pdf_paths:
             st.write(f"- {path.name}")
 
     st.download_button(
-        label="Download saved answers",
+        label="저장된 답변 내려받기",
         data=export_chat_as_text(st.session_state.messages),
         file_name=f"gsm_chat_{st.session_state.session_id}.txt",
         mime="text/plain",
     )
 
-    if st.button("Start new chat"):
+    if st.button("새 대화 시작"):
         st.session_state.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         st.session_state.messages = [
             {
                 "role": "assistant",
-                "content": "New chat started. Upload PDFs and ask anything about them.",
+                "content": "새 대화를 시작했어. PDF를 올리고 궁금한 내용을 편하게 물어봐.",
             }
         ]
         persist_chat_history(st.session_state.session_id, st.session_state.messages)
@@ -263,7 +263,7 @@ if saved_pdf_paths:
             tuple(str(path) for path in saved_pdf_paths),
         )
     except Exception as error:
-        st.error(f"Failed to prepare PDF embeddings: {error}")
+        st.error(f"PDF 임베딩을 준비하는 중 오류가 발생했어요: {error}")
 
 
 llm = ChatGoogleGenerativeAI(
@@ -273,21 +273,20 @@ llm = ChatGoogleGenerativeAI(
 )
 
 system_prompt = """
-You are a warm senior student helping with GSM-related questions.
-Always answer in Korean.
-Use only the information in [Reference].
-If the documents do not contain the answer, say clearly that the answer is not in the PDFs.
+너는 GSM 관련 질문에 답해주는 친근한 선배야.
+항상 한국어로 답하고, 아래 [참고 자료]에 있는 내용만 바탕으로 설명해.
+PDF에 없는 내용은 추측하지 말고, 자료에 없다고 분명하게 말해줘.
 
-Rules:
-1. Start with a one-line summary.
-2. Keep the tone natural and friendly.
-3. Bold important parts with markdown.
-4. Break long sentences into shorter lines.
-5. Do not invent facts.
-6. Stay relevant to the user's question.
-7. If there is an actionable next step, explain it clearly.
+규칙:
+1. 첫 줄에는 한 줄 요약을 적어줘.
+2. 말투는 자연스럽고 친근하게 유지해.
+3. 중요한 부분은 **굵게** 표시해.
+4. 문장이 너무 길어지지 않게 적당히 나눠줘.
+5. 사실을 지어내지 마.
+6. 사용자의 질문과 관련된 내용만 중심으로 답해.
+7. 바로 실천할 수 있는 다음 단계가 있으면 구체적으로 적어줘.
 
-[Reference]
+[참고 자료]
 {context}
 """
 
@@ -307,7 +306,7 @@ for message in st.session_state.messages:
     st.chat_message(message["role"]).write(message["content"])
 
 
-user_input = st.chat_input("Ask a question about the uploaded PDFs...")
+user_input = st.chat_input("업로드한 PDF에 대해 질문해보세요...")
 
 if user_input:
     st.chat_message("user").write(user_input)
@@ -316,13 +315,13 @@ if user_input:
 
     with st.chat_message("assistant"):
         if not rag_chain:
-            response = "PDF files have not been uploaded yet. Please upload PDFs first."
+            response = "아직 PDF가 업로드되지 않았어요. 먼저 PDF 파일을 올려주세요."
             st.write(response)
         else:
             try:
                 response = st.write_stream(rag_chain.stream(user_input))
             except Exception as error:
-                response = f"An error occurred while generating the answer: {error}"
+                response = f"답변을 생성하는 중 오류가 발생했어요: {error}"
                 st.error(response)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
