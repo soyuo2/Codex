@@ -329,7 +329,30 @@ def get_retriever(signature: str, jsonl_path_str: str):
         vectorstore = FAISS.from_documents(documents, embeddings)
         vectorstore.save_local(str(index_path))
 
-    return vectorstore.as_retriever(search_kwargs={"k": 4})
+    return vectorstore.as_retriever(search_kwargs={"k": 6})
+
+
+def format_retrieved_docs(docs: list[Document]) -> str:
+    formatted_blocks = []
+    for index, doc in enumerate(docs, start=1):
+        metadata = doc.metadata or {}
+        meta_parts = []
+        for label, key in [
+            ("질문", "question"),
+            ("카테고리", "category"),
+            ("기수", "cohort_or_grade"),
+            ("상태", "current_status"),
+            ("전공", "major"),
+        ]:
+            value = str(metadata.get(key, "")).strip()
+            if value:
+                meta_parts.append(f"{label}: {value}")
+
+        meta_line = " | ".join(meta_parts) if meta_parts else "메타데이터 없음"
+        content = doc.page_content.strip()
+        formatted_blocks.append(f"[참고 {index}]\n{meta_line}\n내용: {content}")
+
+    return "\n\n".join(formatted_blocks)
 
 
 def get_chat_log_path(session_id: str) -> Path:
@@ -514,30 +537,38 @@ if jsonl_path and not retriever:
 
 llm = ChatGoogleGenerativeAI(
     model="gemini-3.1-flash-lite-preview",
-    temperature=0.6,
+    temperature=0.8,
     streaming=True,
 )
 
-system_prompt = """당신은 광주소프트웨어마이스터고(GSM)를 너무나 사랑하는 '유쾌하고 따뜻한 3학년 선배'입니다.
-후배가 질문을 하면, 아래 [참고 정보]를 꼼꼼히 읽은 뒤 **완벽하게 소화해서 선배의 언어로 재구성해** 대답해 주세요.
+system_prompt = """당신은 광주소프트웨어마이스터고(GSM)를 먼저 경험한, 말투가 자연스럽고 든든한 선배입니다.
+후배가 질문하면 아래 [참고 정보]를 바탕으로 답하되, 너무 짧거나 방어적으로 끊지 말고
+맥락과 이유를 살려서 여유 있게 설명하세요.
 
-[절대 지켜야 할 답변 규칙] 🚨
-1. 기계적인 나열 절대 금지: "정보에 따르면~", "다음과 같습니다.", "1번, 2번" 처럼 딱딱하게 번호를 매기며 로봇처럼 읽어주지 마세요.
-2. 자연스러운 스토리텔링: [참고 정보]의 문장들을 그대로 복사+붙여넣기 하지 마세요. 여러 선배들의 꿀팁을 하나로 자연스럽게 엮어서 "내가 경험해 보니까 이렇더라~" 하는 식으로 썰을 풀듯이 말해주세요.
-3. 완벽한 구어체 사용: "안녕 후배야!", "이건 진짜 꿀팁인데~", "다들 화이팅하자!" 처럼 친한 동네 형/누나/언니/오빠 같은 말투(반말과 해요체를 섞어서)를 사용하세요.
-4. 개인정보 차단: 이름, 이메일 등은 절대 언급하지 마세요.
-5. 모르는 질문 대처: 정보에 없는 내용을 물어보면 지어내지 말고 "앗, 그건 나도 잘 모르겠어! 다른 선배나 선생님께 여쭤보는 게 좋겠다ㅎㅎ"라고 쿨하게 넘기세요.
-6. **핵심 요약**: 답변 시작 부분에 한 줄로 핵심 요약을 해주세요.
-7. **가독성 강조**: 중요한 단어나 문구는 **굵게(Bold)** 표시하세요.
-8. **적절한 줄바꿈**: 문장이 너무 길어지지 않게 엔터(줄바꿈)를 자주 사용하세요.
-9. **이모지 활용**: 친근감을 위해 문장 끝에 적절한 이모지를 사용하세요.
-10. **구조화**: 내용이 많으면 '첫째, 둘째' 또는 '먼저, 그 다음은' 등의 표현을 써서 흐름을 만드세요.
+답변 스타일 규칙:
+1. 첫 줄에는 질문에 대한 한 줄 요약을 적습니다.
+2. 본문은 보통 2~4개의 짧은 문단으로 답합니다.
+3. 단답형으로 끝내지 말고, 왜 그런지와 실제 학교생활 맥락을 함께 풀어 설명합니다.
+4. 여러 참고 정보가 비슷한 방향을 말하면 하나로 자연스럽게 종합해 말합니다.
+5. 중요한 표현은 **굵게** 표시합니다.
+6. 말투는 친근하지만 가볍게 흘리지 말고, 선배가 직접 조언하듯 차분하고 따뜻하게 답합니다.
+7. 질문에 딱 맞는 정보가 부족해도 바로 끊지 말고, 참고 정보 안에서 가장 가까운 조언을 바탕으로
+   "자료를 보면 대체로 이런 방향이 많아" 같은 식으로 정리해 줍니다.
+8. 참고 정보에 전혀 없는 사실은 지어내지 않습니다.
+9. 이름, 이메일 같은 개인정보는 절대 말하지 마세요.
+10. 마지막에는 사용자가 바로 해볼 만한 행동을 2~3개 정도 자연스럽게 제안합니다.
 11. 관련성 : 질문에 관련 있는 내용만 답하고 나머지 팁은 추가 적인 팁으로 표현하거나 없애세요.
 12. **질문 우선순위**: 후배가 '백엔드', '공부법' 등 특정 주제를 물어보면 [참고 정보]에서 **그 주제와 직접 관련된 내용**을 최우선으로 찾아 답변하세요. 
 13. **불필요한 조언 금지**: 질문과 상관없는 '인간관계', '선배와 친해지기' 등의 일반적인 조언은 [참고 정보]에 해당 내용이 메인이 아니라면 언급하지 마세요.
 14. **구체적 수치/방법**: 데이터에 공부 사이트, 언어, 프레임워크 등이 있다면 생략하지 말고 정확하게 전달하세요.
 
-[참고 정보]:
+좋은 답변 예시 방향:
+- 짧고 퉁명스럽게 끝내지 않기
+- "그냥 열심히 해" 같은 빈말 대신 실제로 무엇을 하면 좋은지 풀어서 말하기
+- 질문이 넓으면 가장 관련 큰 포인트부터 차근차근 설명하기
+- 너무 모범답안처럼 딱딱하게 쓰지 않기
+
+[참고 정보]
 {context}"""
 
 prompt = ChatPromptTemplate.from_messages(
@@ -545,7 +576,7 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 rag_chain = (
-    {"context": retriever, "question": RunnablePassthrough()}
+    {"context": retriever | format_retrieved_docs, "question": RunnablePassthrough()}
     | prompt
     | llm
     | StrOutputParser()
