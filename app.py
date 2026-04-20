@@ -1,7 +1,6 @@
 import hashlib
 import json
 import os
-import re
 from datetime import datetime
 from pathlib import Path
 
@@ -18,12 +17,11 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
-UPLOAD_DIR = DATA_DIR / "uploaded_pdfs"
 INDEX_DIR = DATA_DIR / "vectorstores"
 CHAT_LOG_DIR = DATA_DIR / "chat_logs"
-PDF_STATE_FILE = DATA_DIR / "active_pdf_set.json"
+PDF_DIR = BASE_DIR
 
-for directory in [DATA_DIR, UPLOAD_DIR, INDEX_DIR, CHAT_LOG_DIR]:
+for directory in [DATA_DIR, INDEX_DIR, CHAT_LOG_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 
@@ -189,6 +187,17 @@ st.markdown(
         margin-bottom: 0.9rem;
     }
 
+    .info-box {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid #e2e9f6;
+        border-radius: 16px;
+        padding: 0.9rem 1rem;
+        color: #31415f;
+        font-size: 0.95rem;
+        line-height: 1.7;
+        margin-top: 0.5rem;
+    }
+
     [data-testid="stChatMessage"] {
         background: rgba(255, 255, 255, 0.82);
         border: 1px solid rgba(208, 220, 240, 0.8);
@@ -217,74 +226,27 @@ st.markdown(
         min-height: 46px;
         font-weight: 700;
     }
-
-    .upload-hint {
-        font-size: 0.95rem;
-        color: #586887;
-        line-height: 1.65;
-        margin-bottom: 0.8rem;
-    }
-
-    .active-pdf-list {
-        background: rgba(255, 255, 255, 0.8);
-        border: 1px solid #e2e9f6;
-        border-radius: 16px;
-        padding: 0.9rem 1rem;
-        color: #31415f;
-        font-size: 0.95rem;
-        line-height: 1.7;
-        margin-top: 0.5rem;
-    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 
-def sanitize_filename(filename: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_.-]", "_", filename)
-    return cleaned or "document.pdf"
-
-
-def save_uploaded_files(uploaded_files) -> list[Path]:
-    saved_paths = []
-    for uploaded_file in uploaded_files:
-        file_name = sanitize_filename(uploaded_file.name)
-        file_path = UPLOAD_DIR / file_name
-        file_path.write_bytes(uploaded_file.getbuffer())
-        saved_paths.append(file_path)
-    return saved_paths
+def find_source_pdfs() -> list[Path]:
+    return sorted(
+        [path for path in PDF_DIR.glob("*.pdf") if path.is_file()],
+        key=lambda item: item.name.lower(),
+    )
 
 
 def build_pdf_set_signature(pdf_paths: list[Path]) -> str:
     digest = hashlib.sha256()
-    for path in sorted(pdf_paths, key=lambda item: item.name.lower()):
+    for path in pdf_paths:
         file_bytes = path.read_bytes()
         digest.update(path.name.encode("utf-8"))
         digest.update(str(path.stat().st_size).encode("utf-8"))
         digest.update(hashlib.sha256(file_bytes).digest())
     return digest.hexdigest()
-
-
-def save_active_pdf_state(signature: str, pdf_paths: list[Path]) -> None:
-    payload = {
-        "signature": signature,
-        "files": [str(path) for path in pdf_paths],
-        "saved_at": datetime.now().isoformat(timespec="seconds"),
-    }
-    PDF_STATE_FILE.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-
-def load_active_pdf_state() -> dict | None:
-    if not PDF_STATE_FILE.exists():
-        return None
-    try:
-        return json.loads(PDF_STATE_FILE.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return None
 
 
 @st.cache_resource
@@ -374,7 +336,7 @@ def ensure_session_defaults():
                 "role": "assistant",
                 "content": (
                     "안녕 후배야! 😊 학교 생활이나 프로젝트, 진로 고민이 있으면 편하게 물어봐. "
-                    "PDF 자료를 바탕으로 선배처럼 친근하게 답해줄게."
+                    "이 앱에 포함된 PDF 자료를 바탕으로 선배처럼 친근하게 답해줄게."
                 ),
             }
         ]
@@ -385,6 +347,8 @@ ensure_session_defaults()
 if "GOOGLE_API_KEY" in st.secrets:
     os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 
+pdf_paths = find_source_pdfs()
+pdf_signature = build_pdf_set_signature(pdf_paths) if pdf_paths else None
 
 with st.sidebar:
     st.markdown('<div class="sidebar-logo">GSM</div>', unsafe_allow_html=True)
@@ -406,49 +370,24 @@ with st.sidebar:
     st.markdown(
         """
         <div class="warning-card">
-            ⚠️ 답변은 업로드한 PDF 자료를 바탕으로 생성돼요.<br>
+            ⚠️ 답변은 프로젝트 안에 있는 PDF 자료를 바탕으로 생성돼요.<br>
             중요한 결정은 꼭 직접 한 번 더 확인해 주세요.
         </div>
         """,
         unsafe_allow_html=True,
     )
-
     st.markdown("---")
-    st.markdown('<div class="section-chip">PDF 자료 연결</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="upload-hint">학교 자료, 안내 문서, 선배 팁 PDF를 올리면 같은 문서는 나중에도 다시 빠르게 사용할 수 있어요.</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="section-chip">연결된 지식베이스</div>', unsafe_allow_html=True)
 
-    uploaded_files = st.file_uploader(
-        "PDF 파일 업로드",
-        type=["pdf"],
-        accept_multiple_files=True,
-        label_visibility="collapsed",
-    )
-
-    if uploaded_files:
-        saved_pdf_paths = save_uploaded_files(uploaded_files)
-        active_signature = build_pdf_set_signature(saved_pdf_paths)
-        save_active_pdf_state(active_signature, saved_pdf_paths)
-        st.success(f"PDF {len(saved_pdf_paths)}개를 연결했어요.")
-    else:
-        active_state = load_active_pdf_state()
-        active_signature = active_state["signature"] if active_state else None
-        saved_pdf_paths = (
-            [
-                Path(path)
-                for path in active_state.get("files", [])
-                if Path(path).exists()
-            ]
-            if active_state
-            else []
-        )
-
-    if saved_pdf_paths:
-        active_list_html = "<br>".join([f"• {path.name}" for path in saved_pdf_paths])
+    if pdf_paths:
+        file_lines = "<br>".join([f"• {path.name}" for path in pdf_paths])
         st.markdown(
-            f'<div class="active-pdf-list"><strong>현재 연결된 PDF</strong><br>{active_list_html}</div>',
+            f'<div class="info-box"><strong>현재 사용 중인 PDF</strong><br>{file_lines}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="info-box"><strong>PDF가 없어요.</strong><br>앱 폴더에 PDF 파일을 넣으면 자동으로 RAG에 연결돼요.</div>',
             unsafe_allow_html=True,
         )
 
@@ -464,9 +403,7 @@ with st.sidebar:
         st.session_state.messages = [
             {
                 "role": "assistant",
-                "content": (
-                    "새 대화를 시작했어! 😊 PDF를 올리고 궁금한 걸 물어보면 바로 같이 정리해줄게."
-                ),
+                "content": "새 대화를 시작했어! 😊 지금 연결된 PDF 기준으로 다시 도와줄게.",
             }
         ]
         persist_chat_history(st.session_state.session_id, st.session_state.messages)
@@ -474,11 +411,11 @@ with st.sidebar:
 
 
 retriever = None
-if saved_pdf_paths:
+if pdf_paths:
     try:
         retriever = get_retriever(
-            active_signature,
-            tuple(str(path) for path in saved_pdf_paths),
+            pdf_signature,
+            tuple(str(path) for path in pdf_paths),
         )
     except Exception as error:
         st.error(f"PDF 임베딩을 준비하는 중 오류가 발생했어요: {error}")
@@ -519,7 +456,6 @@ rag_chain = (
     | StrOutputParser()
 ) if retriever else None
 
-
 st.markdown(
     """
     <div class="hero-wrap">
@@ -527,13 +463,12 @@ st.markdown(
         <div class="hero-subtitle">학교 생활, 프로젝트, 진로 고민까지! 선배가 다 알려줄게.</div>
         <div class="hero-badge">
             <span class="hero-icon">💬</span>
-            <span>안녕 후배야! 궁금한 게 있으면 편하게 물어봐. 업로드한 PDF를 바탕으로 차근차근 답해줄게.</span>
+            <span>안녕 후배야! 궁금한 게 있으면 편하게 물어봐. 앱에 포함된 PDF 자료를 바탕으로 차근차근 답해줄게.</span>
         </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
-
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -549,7 +484,7 @@ if user_input:
 
     with st.chat_message("assistant"):
         if not rag_chain:
-            response = "아직 PDF가 업로드되지 않았어. 먼저 PDF 파일을 올려주면 바로 도와줄게!"
+            response = "아직 프로젝트 폴더에 PDF가 없어서 답변할 자료가 없어. 앱 폴더에 PDF를 넣어주면 바로 도와줄게!"
             st.write(response)
         else:
             try:
