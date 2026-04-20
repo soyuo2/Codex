@@ -292,6 +292,35 @@ def get_chat_log_path(session_id: str) -> Path:
     return CHAT_LOG_DIR / f"{session_id}.json"
 
 
+def list_saved_chat_sessions() -> list[dict]:
+    sessions = []
+    for path in sorted(CHAT_LOG_DIR.glob("*.json"), reverse=True):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+
+        messages = payload.get("messages", [])
+        preview = "대화 내용이 비어 있어요."
+        for message in messages:
+            if message.get("role") == "user" and message.get("content"):
+                preview = message["content"].strip().replace("\n", " ")
+                break
+
+        preview = preview[:40] + "..." if len(preview) > 40 else preview
+        session_id = payload.get("session_id", path.stem)
+        saved_at = payload.get("saved_at", "")
+        sessions.append(
+            {
+                "session_id": session_id,
+                "saved_at": saved_at,
+                "label": f"{saved_at} | {preview}" if saved_at else preview,
+            }
+        )
+
+    return sessions
+
+
 def persist_chat_history(session_id: str, messages: list[dict]) -> None:
     payload = {
         "session_id": session_id,
@@ -382,6 +411,23 @@ with st.sidebar:
         '<div class="info-box"><strong>바로 질문해 보세요.</strong><br>사용자는 질문만 입력하면 되고, 챗봇이 준비된 자료를 바탕으로 답변해요.</div>',
         unsafe_allow_html=True,
     )
+
+    saved_sessions = list_saved_chat_sessions()
+    if saved_sessions:
+        st.markdown("---")
+        st.markdown('<div class="section-chip">이전 대화</div>', unsafe_allow_html=True)
+        session_options = {session["label"]: session["session_id"] for session in saved_sessions}
+        selected_label = st.selectbox(
+            "저장된 대화 선택",
+            options=list(session_options.keys()),
+            label_visibility="collapsed",
+        )
+
+        if st.button("선택한 대화 불러오기"):
+            selected_session_id = session_options[selected_label]
+            st.session_state.session_id = selected_session_id
+            st.session_state.messages = load_chat_history(selected_session_id)
+            st.rerun()
 
     st.download_button(
         label="답변 기록 내려받기",
