@@ -42,9 +42,7 @@ st.markdown(
     }
 
     [data-testid="stAppViewContainer"] {
-        background:
-            radial-gradient(circle at top left, rgba(199, 220, 255, 0.45), transparent 30%),
-            linear-gradient(180deg, #f8fbff 0%, #ffffff 42%, #f7f9fc 100%);
+        background: linear-gradient(180deg, #fbfcfe 0%, #f7f9fc 100%);
     }
 
     [data-testid="stHeader"] {
@@ -62,18 +60,20 @@ st.markdown(
     }
 
     .block-container {
-        max-width: 1100px;
-        padding-top: 2.6rem;
-        padding-bottom: 7rem;
+        max-width: 980px;
+        padding-top: 2rem;
+        padding-left: clamp(1rem, 3vw, 2.25rem);
+        padding-right: clamp(1rem, 3vw, 2.25rem);
+        padding-bottom: 8rem;
     }
 
     .hero-wrap {
         text-align: center;
-        padding: 2rem 0 0.75rem 0;
+        padding: 1.4rem 0 1.2rem 0;
     }
 
     .hero-title {
-        font-size: 3.2rem;
+        font-size: 2.55rem;
         font-weight: 800;
         color: #1f2a44;
         letter-spacing: -0.04em;
@@ -81,11 +81,11 @@ st.markdown(
     }
 
     .hero-subtitle {
-        font-size: 1.7rem;
+        font-size: 1.18rem;
         font-weight: 700;
         color: #27324a;
         letter-spacing: -0.03em;
-        margin-bottom: 2rem;
+        margin-bottom: 1.25rem;
     }
 
     .hero-badge {
@@ -95,11 +95,12 @@ st.markdown(
         padding: 0.85rem 1.1rem;
         background: #ffffff;
         border: 1px solid #e4ebf7;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(31, 42, 68, 0.06);
+        border-radius: 14px;
+        box-shadow: 0 8px 22px rgba(31, 42, 68, 0.04);
         color: #2e3a55;
-        font-size: 1.02rem;
+        font-size: 0.98rem;
         font-weight: 600;
+        max-width: 900px;
     }
 
     .hero-icon {
@@ -201,15 +202,30 @@ st.markdown(
     [data-testid="stChatMessage"] {
         display: flex !important;
         align-items: flex-start;
-        background: rgba(255, 255, 255, 0.82);
-        border: 1px solid rgba(208, 220, 240, 0.8);
-        border-radius: 22px;
-        padding: 0.35rem 0.35rem;
-        box-shadow: 0 14px 40px rgba(29, 54, 104, 0.05);
-        margin-bottom: 1rem;
-        width: fit-content;
-        max-width: min(86%, 860px);
+        gap: 0.85rem;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        padding: 1.05rem 0;
+        box-shadow: none;
+        margin: 0 auto;
+        width: 100%;
+        max-width: 900px;
         color: #1f2a44 !important;
+    }
+
+    [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {
+        font-size: 1.08rem;
+        line-height: 1.85;
+        letter-spacing: 0;
+    }
+
+    [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {
+        margin: 0 0 0.85rem 0;
+    }
+
+    [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p:last-child {
+        margin-bottom: 0;
     }
 
     [data-testid="stChatMessage"][aria-label*="user" i],
@@ -219,13 +235,29 @@ st.markdown(
         margin-left: auto;
         margin-right: 0;
         flex-direction: row-reverse;
+        justify-content: flex-start;
+        max-width: 900px;
     }
 
     [data-testid="stChatMessage"][aria-label*="user" i] [data-testid="stMarkdownContainer"],
     [data-testid="stChatMessage"]:has([data-testid*="AvatarUser"]) [data-testid="stMarkdownContainer"],
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stMarkdownContainer"],
     [data-testid="stChatMessage"]:has([aria-label="user avatar"]) [data-testid="stMarkdownContainer"] {
+        background: #f4f6f8;
+        border: 1px solid #e6ebf2;
+        border-radius: 18px;
+        padding: 0.7rem 0.95rem;
+        max-width: min(72%, 560px);
+        font-size: 1.03rem;
+        line-height: 1.55;
         text-align: right;
+    }
+
+    [data-testid="stChatMessage"][aria-label*="user" i] [data-testid="stMarkdownContainer"] p,
+    [data-testid="stChatMessage"]:has([data-testid*="AvatarUser"]) [data-testid="stMarkdownContainer"] p,
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stMarkdownContainer"] p,
+    [data-testid="stChatMessage"]:has([aria-label="user avatar"]) [data-testid="stMarkdownContainer"] p {
+        margin: 0;
     }
 
     [data-testid="stChatMessage"] * {
@@ -238,19 +270,25 @@ st.markdown(
     }
 
     [data-testid="stChatInput"] {
-        background: rgba(255, 255, 255, 0.94);
+        background: rgba(248, 251, 255, 0.94);
         border-top: none;
-        padding: 0.9rem 1.1rem 1.1rem 1.1rem !important;
+        padding: 1rem clamp(1rem, 3vw, 2.25rem) 1.25rem clamp(1rem, 3vw, 2.25rem) !important;
         box-sizing: border-box !important;
     }
 
+    [data-testid="stChatInput"] > div {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
     [data-testid="stChatInput"] textarea {
-        border-radius: 20px !important;
+        border-radius: 18px !important;
         border: 1px solid #dfe7f4 !important;
         min-height: 58px !important;
         padding: 0.95rem 1.15rem !important;
         box-sizing: border-box !important;
         line-height: 1.35 !important;
+        box-shadow: 0 10px 30px rgba(31, 42, 68, 0.06) !important;
     }
 
     .stButton > button {
