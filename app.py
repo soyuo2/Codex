@@ -255,10 +255,43 @@ st.markdown(
 
     .stButton > button {
         width: 100%;
-        border-radius: 14px;
-        border: 1px solid #d6e1f2;
+        border-radius: 12px;
+        border: 1px solid #3a3a3a;
         min-height: 46px;
-        font-weight: 700;
+        font-weight: 600;
+        font-size: 0.95rem;
+        background: #1e1e1e !important;
+        color: #e8e8e8 !important;
+        letter-spacing: -0.01em;
+        transition: background 0.15s, border-color 0.15s;
+    }
+
+    .stButton > button:hover {
+        background: #2c2c2c !important;
+        border-color: #555 !important;
+        color: #ffffff !important;
+    }
+
+    .stButton > button:active {
+        background: #383838 !important;
+    }
+
+    [data-testid="stChatInput"] button {
+        background: #1e1e1e !important;
+        border-radius: 10px !important;
+        border: 1px solid #3a3a3a !important;
+        color: #e8e8e8 !important;
+        transition: background 0.15s, border-color 0.15s;
+    }
+
+    [data-testid="stChatInput"] button:hover {
+        background: #2c2c2c !important;
+        border-color: #555 !important;
+    }
+
+    [data-testid="stChatInput"] button svg {
+        fill: #e8e8e8 !important;
+        color: #e8e8e8 !important;
     }
     </style>
     """,
