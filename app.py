@@ -1,8 +1,6 @@
 import hashlib
-import html
 import json
 import os
-import re
 from datetime import datetime
 from pathlib import Path
 
@@ -44,7 +42,9 @@ st.markdown(
     }
 
     [data-testid="stAppViewContainer"] {
-        background: linear-gradient(180deg, #fbfcfe 0%, #f7f9fc 100%);
+        background:
+            radial-gradient(circle at top left, rgba(199, 220, 255, 0.45), transparent 30%),
+            linear-gradient(180deg, #f8fbff 0%, #ffffff 42%, #f7f9fc 100%);
     }
 
     [data-testid="stHeader"] {
@@ -62,20 +62,18 @@ st.markdown(
     }
 
     .block-container {
-        max-width: 980px;
-        padding-top: 2rem;
-        padding-left: clamp(1rem, 3vw, 2.25rem);
-        padding-right: clamp(1rem, 3vw, 2.25rem);
-        padding-bottom: 8rem;
+        max-width: 1100px;
+        padding-top: 2.6rem;
+        padding-bottom: 7rem;
     }
 
     .hero-wrap {
         text-align: center;
-        padding: 1.4rem 0 1.2rem 0;
+        padding: 2rem 0 0.75rem 0;
     }
 
     .hero-title {
-        font-size: 2.55rem;
+        font-size: 3.2rem;
         font-weight: 800;
         color: #1f2a44;
         letter-spacing: -0.04em;
@@ -83,11 +81,11 @@ st.markdown(
     }
 
     .hero-subtitle {
-        font-size: 1.18rem;
+        font-size: 1.7rem;
         font-weight: 700;
         color: #27324a;
         letter-spacing: -0.03em;
-        margin-bottom: 1.25rem;
+        margin-bottom: 2rem;
     }
 
     .hero-badge {
@@ -97,12 +95,11 @@ st.markdown(
         padding: 0.85rem 1.1rem;
         background: #ffffff;
         border: 1px solid #e4ebf7;
-        border-radius: 14px;
-        box-shadow: 0 8px 22px rgba(31, 42, 68, 0.04);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(31, 42, 68, 0.06);
         color: #2e3a55;
-        font-size: 0.98rem;
+        font-size: 1.02rem;
         font-weight: 600;
-        max-width: 900px;
     }
 
     .hero-icon {
@@ -204,30 +201,15 @@ st.markdown(
     [data-testid="stChatMessage"] {
         display: flex !important;
         align-items: flex-start;
-        gap: 0.85rem;
-        background: transparent;
-        border: none;
-        border-radius: 0;
-        padding: 1.05rem 0;
-        box-shadow: none;
-        margin: 0 auto;
-        width: 100%;
-        max-width: 900px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(208, 220, 240, 0.8);
+        border-radius: 22px;
+        padding: 0.35rem 0.35rem;
+        box-shadow: 0 14px 40px rgba(29, 54, 104, 0.05);
+        margin-bottom: 1rem;
+        width: fit-content;
+        max-width: min(86%, 860px);
         color: #1f2a44 !important;
-    }
-
-    [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {
-        font-size: 1.08rem;
-        line-height: 1.85;
-        letter-spacing: 0;
-    }
-
-    [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {
-        margin: 0 0 0.85rem 0;
-    }
-
-    [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p:last-child {
-        margin-bottom: 0;
     }
 
     [data-testid="stChatMessage"][aria-label*="user" i],
@@ -237,112 +219,17 @@ st.markdown(
         margin-left: auto;
         margin-right: 0;
         flex-direction: row-reverse;
-        justify-content: flex-start;
-        max-width: 900px;
     }
 
     [data-testid="stChatMessage"][aria-label*="user" i] [data-testid="stMarkdownContainer"],
     [data-testid="stChatMessage"]:has([data-testid*="AvatarUser"]) [data-testid="stMarkdownContainer"],
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stMarkdownContainer"],
     [data-testid="stChatMessage"]:has([aria-label="user avatar"]) [data-testid="stMarkdownContainer"] {
-        background: #f4f6f8;
-        border: 1px solid #e6ebf2;
-        border-radius: 18px;
-        padding: 0.7rem 0.95rem;
-        max-width: min(72%, 560px);
-        font-size: 1.03rem;
-        line-height: 1.55;
         text-align: right;
-    }
-
-    [data-testid="stChatMessage"][aria-label*="user" i] [data-testid="stMarkdownContainer"] p,
-    [data-testid="stChatMessage"]:has([data-testid*="AvatarUser"]) [data-testid="stMarkdownContainer"] p,
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stMarkdownContainer"] p,
-    [data-testid="stChatMessage"]:has([aria-label="user avatar"]) [data-testid="stMarkdownContainer"] p {
-        margin: 0;
     }
 
     [data-testid="stChatMessage"] * {
         color: #1f2a44 !important;
-    }
-
-    .chat-row {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.95rem;
-        width: 100%;
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 1.15rem 0;
-    }
-
-    .chat-row.user {
-        flex-direction: row-reverse;
-        padding: 0.85rem 0;
-    }
-
-    .chat-avatar {
-        width: 34px;
-        height: 34px;
-        flex: 0 0 34px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 10px;
-        font-size: 0.78rem;
-        font-weight: 800;
-        line-height: 1;
-        margin-top: 0.18rem;
-    }
-
-    .chat-avatar.assistant {
-        background: #ff981d;
-        color: #1f2a44 !important;
-    }
-
-    .chat-avatar.user {
-        background: #ff3131;
-        color: #ffffff !important;
-        border-radius: 12px;
-    }
-
-    .chat-content {
-        min-width: 0;
-        color: #1f2a44;
-        overflow-wrap: anywhere;
-    }
-
-    .chat-content.assistant {
-        width: min(100%, 790px);
-        padding: 0.05rem 0;
-        background: transparent;
-        font-size: 1.08rem;
-        line-height: 1.85;
-    }
-
-    .chat-content.user {
-        width: fit-content;
-        max-width: min(72%, 560px);
-        padding: 0.72rem 1rem;
-        background: #f4f5f7;
-        border: none;
-        border-radius: 20px;
-        box-shadow: none;
-        font-size: 1.03rem;
-        line-height: 1.55;
-    }
-
-    .chat-content p {
-        margin: 0 0 0.85rem 0;
-    }
-
-    .chat-content p:last-child,
-    .chat-content.user p {
-        margin-bottom: 0;
-    }
-
-    .chat-content strong {
-        font-weight: 800;
     }
 
     [data-testid="stMarkdownContainer"],
@@ -351,25 +238,19 @@ st.markdown(
     }
 
     [data-testid="stChatInput"] {
-        background: rgba(248, 251, 255, 0.94);
+        background: rgba(255, 255, 255, 0.94);
         border-top: none;
-        padding: 1rem clamp(1rem, 3vw, 2.25rem) 1.25rem clamp(1rem, 3vw, 2.25rem) !important;
+        padding: 0.9rem 1.1rem 1.1rem 1.1rem !important;
         box-sizing: border-box !important;
     }
 
-    [data-testid="stChatInput"] > div {
-        max-width: 900px;
-        margin: 0 auto;
-    }
-
     [data-testid="stChatInput"] textarea {
-        border-radius: 18px !important;
+        border-radius: 20px !important;
         border: 1px solid #dfe7f4 !important;
         min-height: 58px !important;
         padding: 0.95rem 1.15rem !important;
         box-sizing: border-box !important;
         line-height: 1.35 !important;
-        box-shadow: 0 10px 30px rgba(31, 42, 68, 0.06) !important;
     }
 
     .stButton > button {
@@ -511,7 +392,7 @@ def list_saved_chat_sessions() -> list[dict]:
             continue
 
         messages = payload.get("messages", [])
-        preview = "대화 내용이 비어 있어요."
+        preview = "대화 내용이 비어 있어요"
         for message in messages:
             if message.get("role") == "user" and message.get("content"):
                 preview = message["content"].strip().replace("\n", " ")
@@ -554,36 +435,6 @@ def load_chat_history(session_id: str) -> list[dict]:
         return []
 
 
-def format_chat_content(content: str) -> str:
-    escaped = html.escape(str(content or "").strip())
-    if not escaped:
-        return ""
-
-    escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
-    paragraphs = [
-        paragraph.strip().replace("\n", "<br>")
-        for paragraph in escaped.split("\n\n")
-        if paragraph.strip()
-    ]
-    return "".join(f"<p>{paragraph}</p>" for paragraph in paragraphs)
-
-
-def chat_message_html(role: str, content: str) -> str:
-    role_class = "user" if role == "user" else "assistant"
-    avatar = "U" if role_class == "user" else "AI"
-    body = format_chat_content(content)
-    return f"""
-    <div class="chat-row {role_class}">
-        <div class="chat-avatar {role_class}">{avatar}</div>
-        <div class="chat-content {role_class}">{body}</div>
-    </div>
-    """
-
-
-def render_chat_message(role: str, content: str) -> None:
-    st.markdown(chat_message_html(role, content), unsafe_allow_html=True)
-
-
 def ensure_session_defaults():
     if "session_id" not in st.session_state:
         st.session_state.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -594,7 +445,7 @@ def ensure_session_defaults():
             {
                 "role": "assistant",
                 "content": (
-                    "안녕 후배야! 😊 학교 생활이나 프로젝트, 진로 고민이 있으면 편하게 물어봐. "
+                    "안녕 후배야! 혹시 학교 생활이나 프로젝트, 진로 고민이 있으면 편하게 물어봐. "
                     "준비된 상담 데이터와 학교 자료를 바탕으로 선배처럼 친근하게 답해줄게."
                 ),
             }
@@ -614,16 +465,16 @@ if jsonl_path:
 
 with st.sidebar:
     st.markdown('<div class="sidebar-logo">GSM</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section-title">📌 이용 안내</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section-title">💡 이용 안내</div>', unsafe_allow_html=True)
     st.markdown(
         """
         <div class="sidebar-card">
             <div class="sidebar-card-title">질문 예시</div>
             <ul class="sidebar-list">
-                <li>1학년 때부터 하면 좋은 건 뭐야?</li>
-                <li>기숙사 생활 꿀팁 알려줘!</li>
-                <li>프로젝트 팀장을 맡으면 어떻게 해야 해?</li>
-                <li>전공 선택이 고민일 때는 어떻게 해?</li>
+                <li>1학년 때부터 하면 좋은 게 뭐야?</li>
+                <li>기숙사 생활 꿀팁 알려줘</li>
+                <li>프로젝트 팀원을 맞추면 어떻게 해야 해?</li>
+                <li>전공 선택이 고민될 때는 어떻게 해?</li>
             </ul>
         </div>
         """,
@@ -678,7 +529,7 @@ with st.sidebar:
         st.session_state.messages = [
             {
                 "role": "assistant",
-                "content": "새 대화를 시작했어! 😊 궁금한 걸 다시 편하게 물어봐.",
+                "content": "새 대화를 시작했어! 또 궁금한 걸 편하게 물어봐.",
             }
         ]
         persist_chat_history(st.session_state.session_id, st.session_state.messages)
@@ -693,18 +544,18 @@ if jsonl_path:
             str(jsonl_path),
         )
     except Exception as error:
-        st.error(f"지식베이스를 준비하는 중 오류가 발생했어: {error}")
+        st.error(f"지식베이스를 준비하는 중 오류가 발생했어요: {error}")
 
 if not jsonl_path:
     st.error(
-        "지식베이스 파일을 찾지 못했어. "
+        "지식베이스 파일을 찾지 못했어요. "
         "`gsm_guide_rag_chunks.jsonl` 파일이 프로젝트 안에 포함되어 있는지 확인해줘."
     )
 
 if jsonl_path and not retriever:
     st.error(
-        "지식베이스 파일은 찾았지만 임베딩이나 벡터 저장소를 준비하지 못했어. "
-        "배포 로그를 확인해서 구체적인 오류를 봐줘."
+        "지식베이스 파일은 찾았지만 임베딩 또는 벡터 저장소를 준비하지 못했어요. "
+        "배포 로그에서 구체적인 오류를 확인해줘."
     )
 
 
@@ -771,58 +622,20 @@ st.markdown(
 )
 
 for message in st.session_state.messages:
-    render_chat_message(message["role"], message["content"])
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
 
 user_input = st.chat_input("선배에게 질문하기...")
 
 if user_input:
-    render_chat_message("user", user_input)
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    persist_chat_history(st.session_state.session_id, st.session_state.messages)
-
-    assistant_placeholder = st.empty()
-    if not rag_chain:
-        response = "지금은 답변에 사용할 상담 데이터가 준비되지 않았어. 잠시 뒤 다시 시도해줘."
-        assistant_placeholder.markdown(
-            chat_message_html("assistant", response),
-            unsafe_allow_html=True,
-        )
-    else:
-        response_parts = []
-        try:
-            for chunk in rag_chain.stream(user_input):
-                response_parts.append(str(chunk))
-                assistant_placeholder.markdown(
-                    chat_message_html("assistant", "".join(response_parts)),
-                    unsafe_allow_html=True,
-                )
-
-            response = "".join(response_parts).strip()
-            if not response:
-                response = "답변을 제대로 받지 못했어. 질문을 한 번만 다시 보내줘."
-                assistant_placeholder.markdown(
-                    chat_message_html("assistant", response),
-                    unsafe_allow_html=True,
-                )
-        except Exception as error:
-            response = f"답변을 만드는 중 오류가 발생했어: {error}"
-            assistant_placeholder.markdown(
-                chat_message_html("assistant", response),
-                unsafe_allow_html=True,
-            )
-
-    st.session_state.messages.append({"role": "assistant", "content": response})
-    persist_chat_history(st.session_state.session_id, st.session_state.messages)
-
-if False and user_input:
     st.chat_message("user").write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     persist_chat_history(st.session_state.session_id, st.session_state.messages)
 
     with st.chat_message("assistant"):
         if not rag_chain:
-            response = "지금은 답변에 사용할 상담 데이터가 준비되지 않았어. 잠시 후 다시 시도해줘."
+            response = "지금은 답변에 사용할 상담 데이터가 준비되지 않았어. 잠시 뒤 다시 시도해줘."
             st.write(response)
         else:
             try:
