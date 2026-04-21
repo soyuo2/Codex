@@ -220,13 +220,17 @@ st.markdown(
     [data-testid="stChatInput"] {
         background: rgba(255, 255, 255, 0.94);
         border-top: none;
+        padding: 0.9rem 1.1rem 1.1rem 1.1rem !important;
+        box-sizing: border-box !important;
     }
 
     [data-testid="stChatInput"] textarea {
         border-radius: 20px !important;
         border: 1px solid #dfe7f4 !important;
         min-height: 58px !important;
-        padding-top: 0.9rem !important;
+        padding: 0.95rem 1.15rem !important;
+        box-sizing: border-box !important;
+        line-height: 1.35 !important;
     }
 
     .stButton > button {
