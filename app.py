@@ -1,6 +1,8 @@
 import hashlib
+import html
 import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -264,6 +266,85 @@ st.markdown(
         color: #1f2a44 !important;
     }
 
+    .chat-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.95rem;
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 1.15rem 0;
+    }
+
+    .chat-row.user {
+        flex-direction: row-reverse;
+        padding: 0.85rem 0;
+    }
+
+    .chat-avatar {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-top: 0.18rem;
+    }
+
+    .chat-avatar.assistant {
+        background: #ff981d;
+        color: #1f2a44 !important;
+    }
+
+    .chat-avatar.user {
+        background: #ff3131;
+        color: #ffffff !important;
+        border-radius: 12px;
+    }
+
+    .chat-content {
+        min-width: 0;
+        color: #1f2a44;
+        overflow-wrap: anywhere;
+    }
+
+    .chat-content.assistant {
+        width: min(100%, 790px);
+        padding: 0.05rem 0;
+        background: transparent;
+        font-size: 1.08rem;
+        line-height: 1.85;
+    }
+
+    .chat-content.user {
+        width: fit-content;
+        max-width: min(72%, 560px);
+        padding: 0.72rem 1rem;
+        background: #f4f5f7;
+        border: none;
+        border-radius: 20px;
+        box-shadow: none;
+        font-size: 1.03rem;
+        line-height: 1.55;
+    }
+
+    .chat-content p {
+        margin: 0 0 0.85rem 0;
+    }
+
+    .chat-content p:last-child,
+    .chat-content.user p {
+        margin-bottom: 0;
+    }
+
+    .chat-content strong {
+        font-weight: 800;
+    }
+
     [data-testid="stMarkdownContainer"],
     [data-testid="stMarkdownContainer"] * {
         color: #1f2a44 !important;
@@ -473,6 +554,36 @@ def load_chat_history(session_id: str) -> list[dict]:
         return []
 
 
+def format_chat_content(content: str) -> str:
+    escaped = html.escape(str(content or "").strip())
+    if not escaped:
+        return ""
+
+    escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
+    paragraphs = [
+        paragraph.strip().replace("\n", "<br>")
+        for paragraph in escaped.split("\n\n")
+        if paragraph.strip()
+    ]
+    return "".join(f"<p>{paragraph}</p>" for paragraph in paragraphs)
+
+
+def chat_message_html(role: str, content: str) -> str:
+    role_class = "user" if role == "user" else "assistant"
+    avatar = "U" if role_class == "user" else "AI"
+    body = format_chat_content(content)
+    return f"""
+    <div class="chat-row {role_class}">
+        <div class="chat-avatar {role_class}">{avatar}</div>
+        <div class="chat-content {role_class}">{body}</div>
+    </div>
+    """
+
+
+def render_chat_message(role: str, content: str) -> None:
+    st.markdown(chat_message_html(role, content), unsafe_allow_html=True)
+
+
 def ensure_session_defaults():
     if "session_id" not in st.session_state:
         st.session_state.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -660,13 +771,51 @@ st.markdown(
 )
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+    render_chat_message(message["role"], message["content"])
 
 
 user_input = st.chat_input("선배에게 질문하기...")
 
 if user_input:
+    render_chat_message("user", user_input)
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    persist_chat_history(st.session_state.session_id, st.session_state.messages)
+
+    assistant_placeholder = st.empty()
+    if not rag_chain:
+        response = "지금은 답변에 사용할 상담 데이터가 준비되지 않았어. 잠시 뒤 다시 시도해줘."
+        assistant_placeholder.markdown(
+            chat_message_html("assistant", response),
+            unsafe_allow_html=True,
+        )
+    else:
+        response_parts = []
+        try:
+            for chunk in rag_chain.stream(user_input):
+                response_parts.append(str(chunk))
+                assistant_placeholder.markdown(
+                    chat_message_html("assistant", "".join(response_parts)),
+                    unsafe_allow_html=True,
+                )
+
+            response = "".join(response_parts).strip()
+            if not response:
+                response = "답변을 제대로 받지 못했어. 질문을 한 번만 다시 보내줘."
+                assistant_placeholder.markdown(
+                    chat_message_html("assistant", response),
+                    unsafe_allow_html=True,
+                )
+        except Exception as error:
+            response = f"답변을 만드는 중 오류가 발생했어: {error}"
+            assistant_placeholder.markdown(
+                chat_message_html("assistant", response),
+                unsafe_allow_html=True,
+            )
+
+    st.session_state.messages.append({"role": "assistant", "content": response})
+    persist_chat_history(st.session_state.session_id, st.session_state.messages)
+
+if False and user_input:
     st.chat_message("user").write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
     persist_chat_history(st.session_state.session_id, st.session_state.messages)
