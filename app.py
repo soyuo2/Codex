@@ -199,13 +199,33 @@ st.markdown(
     }
 
     [data-testid="stChatMessage"] {
+        display: flex !important;
+        align-items: flex-start;
         background: rgba(255, 255, 255, 0.82);
         border: 1px solid rgba(208, 220, 240, 0.8);
         border-radius: 22px;
         padding: 0.35rem 0.35rem;
         box-shadow: 0 14px 40px rgba(29, 54, 104, 0.05);
         margin-bottom: 1rem;
+        width: fit-content;
+        max-width: min(86%, 860px);
         color: #1f2a44 !important;
+    }
+
+    [data-testid="stChatMessage"][aria-label*="user" i],
+    [data-testid="stChatMessage"]:has([data-testid*="AvatarUser"]),
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]),
+    [data-testid="stChatMessage"]:has([aria-label="user avatar"]) {
+        margin-left: auto;
+        margin-right: 0;
+        flex-direction: row-reverse;
+    }
+
+    [data-testid="stChatMessage"][aria-label*="user" i] [data-testid="stMarkdownContainer"],
+    [data-testid="stChatMessage"]:has([data-testid*="AvatarUser"]) [data-testid="stMarkdownContainer"],
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) [data-testid="stMarkdownContainer"],
+    [data-testid="stChatMessage"]:has([aria-label="user avatar"]) [data-testid="stMarkdownContainer"] {
+        text-align: right;
     }
 
     [data-testid="stChatMessage"] * {
