@@ -1,0 +1,45 @@
+WARN Fixing invalid version specifier by removing stray quotes (before: `>= '2.7'`; after: `>= 2.7`)
+WARN Fixing invalid version specifier by removing stray quotes (before: `>= '2.7'`; after: `>= 2.7`)
+Downloading pygments (1.2MiB)
+Downloading pandas (9.4MiB)
+Downloading pydantic-core (2.0MiB)
+Downloading langchain-community (2.4MiB)
+Downloading setuptools (1.0MiB)
+Downloading networkx (2.0MiB)
+Downloading tokenizers (2.6MiB)
+Downloading hf-xet (3.5MiB)
+Downloading sqlalchemy (2.0MiB)
+Downloading cryptography (3.3MiB)
+Downloading pillow (6.9MiB)
+Downloading streamlit (8.6MiB)
+Downloading transformers (9.8MiB)
+Downloading sympy (6.0MiB)
+Downloading pydeck (10.8MiB)
+Downloading faiss-cpu (18.0MiB)
+Downloading pyarrow (26.7MiB)
+Downloading torch (109.2MiB)
+Downloading scipy (35.6MiB)
+Downloading numpy (11.9MiB)
+Downloading scikit-learn (7.7MiB)
+ Downloaded pygments
+ Downloaded pydantic-core
+ Downloaded sqlalchemy
+ Downloaded setuptools
+ Downloaded tokenizers
+ Downloaded networkx
+ Downloaded cryptography
+ Downloaded hf-xet
+ Downloaded langchain-community
+ Downloaded pillow
+ Downloaded sympy
+ Downloaded scikit-learn
+ Downloaded streamlit
+ Downloaded pandas
+ Downloaded pydeck
+ Downloaded numpy
+ Downloaded faiss-cpu
+ Downloaded transformers
+ Downloaded scipy
+ Downloaded pyarrow
+ Downloaded torch
+Installed 119 packages in 10.38s
