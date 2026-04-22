@@ -295,6 +295,34 @@ st.markdown(
         opacity: 1 !important;
     }
 
+    [data-testid="stBottom"],
+    [data-testid="stBottom"] *,
+    [data-testid="stBottom"] *::before,
+    [data-testid="stBottom"] *::after,
+    [data-testid="stBottomBlockContainer"],
+    [data-testid="stBottomBlockContainer"] *,
+    [data-testid="stBottomBlockContainer"] *::before,
+    [data-testid="stBottomBlockContainer"] *::after,
+    [data-testid="stChatInput"],
+    [data-testid="stChatInput"] *,
+    [data-testid="stChatInput"] *::before,
+    [data-testid="stChatInput"] *::after {
+        outline: 0 !important;
+        box-shadow: none !important;
+        border-color: transparent !important;
+        --primary-color: transparent !important;
+    }
+
+    [data-testid="stChatInput"] [data-baseweb="textarea"],
+    [data-testid="stChatInput"] textarea {
+        background: #ffffff !important;
+        border: 1px solid #dfe7f4 !important;
+        border-radius: 20px !important;
+        color: #1f2a44 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+
     .stButton > button {
         width: 100%;
         border-radius: 14px;
