@@ -237,20 +237,62 @@ st.markdown(
         color: #1f2a44 !important;
     }
 
+    [data-testid="stBottom"],
+    [data-testid="stBottomBlockContainer"],
     [data-testid="stChatInput"] {
-        background: rgba(255, 255, 255, 0.94);
-        border-top: none;
+        background: #ffffff !important;
+        border: 0 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stChatInput"] {
         padding: 0.9rem 1.1rem 1.1rem 1.1rem !important;
         box-sizing: border-box !important;
     }
 
-    [data-testid="stChatInput"] textarea {
+    [data-testid="stChatInput"],
+    [data-testid="stChatInput"]:focus,
+    [data-testid="stChatInput"]:focus-visible,
+    [data-testid="stChatInput"]:focus-within,
+    [data-testid="stChatInput"] > div,
+    [data-testid="stChatInput"] > div:focus-within,
+    [data-testid="stChatInput"] form,
+    [data-testid="stChatInput"] form:focus-within,
+    [data-testid="stChatInput"] [data-baseweb="textarea"],
+    [data-testid="stChatInput"] [data-baseweb="textarea"]:focus-within {
+        border: 0 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stChatInput"] textarea,
+    [data-testid="stChatInput"] [data-baseweb="textarea"] textarea {
+        background: #ffffff !important;
+        color: #1f2a44 !important;
         border-radius: 20px !important;
         border: 1px solid #dfe7f4 !important;
         min-height: 58px !important;
         padding: 0.95rem 1.15rem !important;
         box-sizing: border-box !important;
         line-height: 1.35 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stChatInput"] textarea:focus,
+    [data-testid="stChatInput"] textarea:focus-visible,
+    [data-testid="stChatInput"] [data-baseweb="textarea"] textarea:focus,
+    [data-testid="stChatInput"] [data-baseweb="textarea"] textarea:focus-visible {
+        border: 1px solid #dfe7f4 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stChatInput"] textarea::placeholder,
+    [data-testid="stChatInput"] [data-baseweb="textarea"] textarea::placeholder {
+        color: #9aa3b2 !important;
+        opacity: 1 !important;
     }
 
     .stButton > button {
