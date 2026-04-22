@@ -237,90 +237,63 @@ st.markdown(
         color: #1f2a44 !important;
     }
 
-    [data-testid="stBottom"],
-    [data-testid="stBottomBlockContainer"],
-    [data-testid="stChatInput"] {
-        background: #ffffff !important;
+    [data-testid="stForm"] {
+        max-width: 980px;
+        margin: 1.5rem auto 0 auto;
+        padding: 0.55rem 0.65rem;
+        background: #ffffff;
+        border: 1px solid #e5ebf5;
+        border-radius: 22px;
+        box-shadow: 0 16px 42px rgba(31, 42, 68, 0.06);
+    }
+
+    [data-testid="stForm"] [data-testid="stTextInput"] {
+        margin-bottom: 0;
+    }
+
+    [data-testid="stForm"] [data-testid="stTextInput"] > div,
+    [data-testid="stForm"] [data-baseweb="input"] {
         border: 0 !important;
         outline: 0 !important;
         box-shadow: none !important;
+        background: transparent !important;
     }
 
-    [data-testid="stChatInput"] {
-        padding: 0.9rem 1.1rem 1.1rem 1.1rem !important;
-        box-sizing: border-box !important;
-    }
-
-    [data-testid="stChatInput"],
-    [data-testid="stChatInput"]:focus,
-    [data-testid="stChatInput"]:focus-visible,
-    [data-testid="stChatInput"]:focus-within,
-    [data-testid="stChatInput"] > div,
-    [data-testid="stChatInput"] > div:focus-within,
-    [data-testid="stChatInput"] form,
-    [data-testid="stChatInput"] form:focus-within,
-    [data-testid="stChatInput"] [data-baseweb="textarea"],
-    [data-testid="stChatInput"] [data-baseweb="textarea"]:focus-within {
+    [data-testid="stForm"] input {
+        min-height: 52px;
+        padding: 0 1rem !important;
         border: 0 !important;
         outline: 0 !important;
         box-shadow: none !important;
-    }
-
-    [data-testid="stChatInput"] textarea,
-    [data-testid="stChatInput"] [data-baseweb="textarea"] textarea {
-        background: #ffffff !important;
+        background: transparent !important;
         color: #1f2a44 !important;
-        border-radius: 20px !important;
-        border: 1px solid #dfe7f4 !important;
-        min-height: 58px !important;
-        padding: 0.95rem 1.15rem !important;
-        box-sizing: border-box !important;
-        line-height: 1.35 !important;
-        outline: 0 !important;
-        box-shadow: none !important;
+        font-size: 1.05rem !important;
     }
 
-    [data-testid="stChatInput"] textarea:focus,
-    [data-testid="stChatInput"] textarea:focus-visible,
-    [data-testid="stChatInput"] [data-baseweb="textarea"] textarea:focus,
-    [data-testid="stChatInput"] [data-baseweb="textarea"] textarea:focus-visible {
-        border: 1px solid #dfe7f4 !important;
-        outline: 0 !important;
-        box-shadow: none !important;
-    }
-
-    [data-testid="stChatInput"] textarea::placeholder,
-    [data-testid="stChatInput"] [data-baseweb="textarea"] textarea::placeholder {
-        color: #9aa3b2 !important;
+    [data-testid="stForm"] input::placeholder {
+        color: #8e98a8 !important;
         opacity: 1 !important;
     }
 
-    [data-testid="stBottom"],
-    [data-testid="stBottom"] *,
-    [data-testid="stBottom"] *::before,
-    [data-testid="stBottom"] *::after,
-    [data-testid="stBottomBlockContainer"],
-    [data-testid="stBottomBlockContainer"] *,
-    [data-testid="stBottomBlockContainer"] *::before,
-    [data-testid="stBottomBlockContainer"] *::after,
-    [data-testid="stChatInput"],
-    [data-testid="stChatInput"] *,
-    [data-testid="stChatInput"] *::before,
-    [data-testid="stChatInput"] *::after {
-        outline: 0 !important;
-        box-shadow: none !important;
-        border-color: transparent !important;
-        --primary-color: transparent !important;
+    [data-testid="stFormSubmitButton"] > button {
+        width: 52px;
+        min-width: 52px;
+        height: 52px;
+        min-height: 52px;
+        padding: 0;
+        border: 0;
+        border-radius: 14px;
+        background: #eef2f8;
+        color: #7b8494;
+        font-size: 1.35rem;
+        font-weight: 700;
+        box-shadow: none;
     }
 
-    [data-testid="stChatInput"] [data-baseweb="textarea"],
-    [data-testid="stChatInput"] textarea {
-        background: #ffffff !important;
-        border: 1px solid #dfe7f4 !important;
-        border-radius: 20px !important;
-        color: #1f2a44 !important;
-        outline: 0 !important;
-        box-shadow: none !important;
+    [data-testid="stFormSubmitButton"] > button:hover {
+        background: #e4eaf3;
+        color: #1f2a44;
+        border: 0;
     }
 
     .stButton > button {
@@ -522,6 +495,47 @@ def ensure_session_defaults():
         ]
 
 
+def render_chat_input() -> str | None:
+    with st.form("chat_input_form", clear_on_submit=True):
+        input_col, submit_col = st.columns([1, 0.05])
+        question = input_col.text_input(
+            "선배에게 질문하기",
+            placeholder="선배에게 질문하기...",
+            label_visibility="collapsed",
+        )
+        submitted = submit_col.form_submit_button("↑", use_container_width=True)
+
+    if submitted and question.strip():
+        return question.strip()
+
+    return None
+
+
+def append_message(role: str, content: str) -> None:
+    st.session_state.messages.append({"role": role, "content": content})
+    persist_chat_history(st.session_state.session_id, st.session_state.messages)
+
+
+def render_messages(messages: list[dict]) -> None:
+    for message in messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+
+def stream_assistant_reply(question: str, chain) -> str:
+    if not chain:
+        response = "지금은 답변에 사용할 상담 데이터가 준비되지 않았어. 잠시 뒤 다시 시도해줘."
+        st.write(response)
+        return response
+
+    try:
+        return st.write_stream(chain.stream(question))
+    except Exception as error:
+        response = f"답변을 생성하는 중 오류가 발생했어: {error}"
+        st.error(response)
+        return response
+
+
 ensure_session_defaults()
 
 if "GOOGLE_API_KEY" in st.secrets:
@@ -691,28 +705,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+render_messages(st.session_state.messages)
 
 
-user_input = st.chat_input("선배에게 질문하기...")
+user_input = render_chat_input()
 
 if user_input:
     st.chat_message("user").write(user_input)
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    persist_chat_history(st.session_state.session_id, st.session_state.messages)
+    append_message("user", user_input)
 
     with st.chat_message("assistant"):
-        if not rag_chain:
-            response = "지금은 답변에 사용할 상담 데이터가 준비되지 않았어. 잠시 뒤 다시 시도해줘."
-            st.write(response)
-        else:
-            try:
-                response = st.write_stream(rag_chain.stream(user_input))
-            except Exception as error:
-                response = f"답변을 생성하는 중 오류가 발생했어: {error}"
-                st.error(response)
+        response = stream_assistant_reply(user_input, rag_chain)
 
-    st.session_state.messages.append({"role": "assistant", "content": response})
-    persist_chat_history(st.session_state.session_id, st.session_state.messages)
+    append_message("assistant", response)
