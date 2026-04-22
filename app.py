@@ -236,29 +236,20 @@ APP_CSS = """
         color: #1f2a44 !important;
     }
 
-    [data-testid="stForm"] {
-        max-width: 980px;
-        margin: 1.5rem auto 0 auto;
-        padding: 0.55rem 0.65rem;
-        background: #ffffff;
-        border: 1px solid #e5ebf5;
-        border-radius: 22px;
-        box-shadow: 0 16px 42px rgba(31, 42, 68, 0.06);
-    }
-
-    [data-testid="stForm"] [data-testid="stTextInput"] {
+    [data-testid="stTextInput"] {
         margin-bottom: 0;
     }
 
-    [data-testid="stForm"] [data-testid="stTextInput"] > div,
-    [data-testid="stForm"] [data-baseweb="input"] {
-        border: 0 !important;
-        outline: 0 !important;
+    [data-testid="stTextInput"] > div,
+    [data-testid="stTextInput"] [data-baseweb="input"] {
+        background: #ffffff !important;
+        border: 1px solid #e5ebf5 !important;
+        border-radius: 20px !important;
         box-shadow: none !important;
-        background: transparent !important;
+        outline: 0 !important;
     }
 
-    [data-testid="stForm"] input {
+    [data-testid="stTextInput"] input {
         min-height: 52px;
         padding: 0 1rem !important;
         border: 0 !important;
@@ -269,12 +260,22 @@ APP_CSS = """
         font-size: 1.05rem !important;
     }
 
-    [data-testid="stForm"] input::placeholder {
+    [data-testid="stTextInput"] input::placeholder {
         color: #8e98a8 !important;
         opacity: 1 !important;
     }
 
-    [data-testid="stFormSubmitButton"] > button {
+    [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) {
+        max-width: 980px;
+        margin: 1.5rem auto 0 auto;
+        padding: 0.55rem 0.65rem;
+        background: #ffffff;
+        border: 0;
+        border-radius: 22px;
+        box-shadow: 0 16px 42px rgba(31, 42, 68, 0.06);
+    }
+
+    [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) [data-testid="stButton"] > button {
         width: 52px;
         min-width: 52px;
         height: 52px;
@@ -289,7 +290,7 @@ APP_CSS = """
         box-shadow: none;
     }
 
-    [data-testid="stFormSubmitButton"] > button:hover {
+    [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) [data-testid="stButton"] > button:hover {
         background: #e4eaf3;
         color: #1f2a44;
         border: 0;
@@ -499,6 +500,9 @@ def ensure_session_defaults():
     if "session_id" not in st.session_state:
         st.session_state.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+    if "chat_question" not in st.session_state:
+        st.session_state.chat_question = ""
+
     if "messages" not in st.session_state:
         stored_messages = load_chat_history(st.session_state.session_id)
         st.session_state.messages = stored_messages or [
@@ -512,20 +516,25 @@ def ensure_session_defaults():
         ]
 
 
+def queue_chat_input() -> None:
+    question = st.session_state.get("chat_question", "").strip()
+    if question:
+        st.session_state.pending_user_input = question
+        st.session_state.chat_question = ""
+
+
 def render_chat_input() -> str | None:
-    with st.form("chat_input_form", clear_on_submit=True):
-        input_col, submit_col = st.columns([1, 0.05])
-        question = input_col.text_input(
-            "선배에게 질문하기",
-            placeholder="선배에게 질문하기...",
-            label_visibility="collapsed",
-        )
-        submitted = submit_col.form_submit_button("↑", use_container_width=True)
+    input_col, submit_col = st.columns([1, 0.05])
+    input_col.text_input(
+        "선배에게 질문하기",
+        key="chat_question",
+        placeholder="선배에게 질문하기...",
+        label_visibility="collapsed",
+        on_change=queue_chat_input,
+    )
+    submit_col.button("↑", key="chat_submit", use_container_width=True, on_click=queue_chat_input)
 
-    if submitted and question.strip():
-        return question.strip()
-
-    return None
+    return st.session_state.pop("pending_user_input", None)
 
 
 def append_message(role: str, content: str) -> None:
