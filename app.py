@@ -32,8 +32,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-st.markdown(
-    """
+APP_CSS = """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap');
 
@@ -304,9 +303,11 @@ st.markdown(
         font-weight: 700;
     }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
+"""
+
+
+def inject_styles() -> None:
+    st.markdown(APP_CSS, unsafe_allow_html=True)
 
 
 def find_source_jsonl() -> Path | None:
@@ -377,6 +378,22 @@ def load_documents_from_jsonl(jsonl_path: Path) -> tuple[list[Document], int]:
             documents.append(Document(page_content=text, metadata=metadata))
 
     return documents, len(documents)
+
+
+@st.cache_data(show_spinner=False)
+def count_documents_from_jsonl(jsonl_path_str: str) -> int:
+    count = 0
+    with Path(jsonl_path_str).open("r", encoding="utf-8") as file:
+        for line in file:
+            if not line.strip():
+                continue
+
+            row = json.loads(line)
+            text = str(row.get("text") or row.get("answer") or "").strip()
+            if text:
+                count += 1
+
+    return count
 
 
 @st.cache_resource(show_spinner=False)
@@ -536,120 +553,136 @@ def stream_assistant_reply(question: str, chain) -> str:
         return response
 
 
-ensure_session_defaults()
-
-if "GOOGLE_API_KEY" in st.secrets:
-    os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
-
-jsonl_path = find_source_jsonl()
-data_signature = build_data_signature(jsonl_path) if jsonl_path else None
-chunk_count = 0
-if jsonl_path:
-    _, chunk_count = load_documents_from_jsonl(jsonl_path)
-
-with st.sidebar:
-    st.markdown('<div class="sidebar-logo">GSM</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section-title">💡 이용 안내</div>', unsafe_allow_html=True)
-    st.markdown(
-        """
-        <div class="sidebar-card">
-            <div class="sidebar-card-title">질문 예시</div>
-            <ul class="sidebar-list">
-                <li>1학년 때부터 하면 좋은 게 뭐야?</li>
-                <li>기숙사 생활 꿀팁 알려줘</li>
-                <li>프로젝트 팀원을 맞추면 어떻게 해야 해?</li>
-                <li>전공 선택이 고민될 때는 어떻게 해?</li>
-            </ul>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        """
-        <div class="warning-card">
-            ⚠️ 답변은 준비된 상담 데이터와 학교 자료를 바탕으로 생성돼요.<br>
-            중요한 결정은 꼭 직접 한 번 더 확인해 주세요.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    st.markdown("---")
-    st.markdown('<div class="section-chip">안내</div>', unsafe_allow_html=True)
-
-    if jsonl_path:
+def render_sidebar(jsonl_path: Path | None, chunk_count: int) -> None:
+    with st.sidebar:
+        st.markdown('<div class="sidebar-logo">GSM</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-section-title">💡 이용 안내</div>', unsafe_allow_html=True)
         st.markdown(
-            (
-                '<div class="info-box"><strong>준비된 상담 데이터가 연결되어 있어요.</strong><br>'
-                f'현재 {chunk_count}개의 RAG 청크를 기반으로 답변하고 있어요.<br>'
-                f'데이터 파일: {jsonl_path.name}</div>'
-            ),
+            """
+            <div class="sidebar-card">
+                <div class="sidebar-card-title">질문 예시</div>
+                <ul class="sidebar-list">
+                    <li>1학년 때부터 하면 좋은 게 뭐야?</li>
+                    <li>기숙사 생활 꿀팁 알려줘</li>
+                    <li>프로젝트 팀원을 맞추면 어떻게 해야 해?</li>
+                    <li>전공 선택이 고민될 때는 어떻게 해?</li>
+                </ul>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
-    else:
         st.markdown(
-            '<div class="info-box"><strong>상담 데이터가 아직 연결되지 않았어요.</strong><br>관리자가 지식베이스 파일을 준비하면 바로 사용할 수 있어요.</div>',
+            """
+            <div class="warning-card">
+                ⚠️ 답변은 준비된 상담 데이터와 학교 자료를 바탕으로 생성돼요.<br>
+                중요한 결정은 꼭 직접 한 번 더 확인해 주세요.
+            </div>
+            """,
             unsafe_allow_html=True,
         )
-
-    saved_sessions = list_saved_chat_sessions()
-    if saved_sessions:
         st.markdown("---")
-        st.markdown('<div class="section-chip">이전 대화</div>', unsafe_allow_html=True)
-        session_options = {session["label"]: session["session_id"] for session in saved_sessions}
-        selected_label = st.selectbox(
-            "저장된 대화 선택",
-            options=list(session_options.keys()),
-            label_visibility="collapsed",
-        )
+        st.markdown('<div class="section-chip">안내</div>', unsafe_allow_html=True)
 
-        if st.button("선택한 대화 불러오기"):
-            selected_session_id = session_options[selected_label]
-            st.session_state.session_id = selected_session_id
-            st.session_state.messages = load_chat_history(selected_session_id)
+        if jsonl_path:
+            st.markdown(
+                (
+                    '<div class="info-box"><strong>준비된 상담 데이터가 연결되어 있어요.</strong><br>'
+                    f'현재 {chunk_count}개의 RAG 청크를 기반으로 답변하고 있어요.<br>'
+                    f'데이터 파일: {jsonl_path.name}</div>'
+                ),
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<div class="info-box"><strong>상담 데이터가 아직 연결되지 않았어요.</strong><br>관리자가 지식베이스 파일을 준비하면 바로 사용할 수 있어요.</div>',
+                unsafe_allow_html=True,
+            )
+
+        saved_sessions = list_saved_chat_sessions()
+        if saved_sessions:
+            st.markdown("---")
+            st.markdown('<div class="section-chip">이전 대화</div>', unsafe_allow_html=True)
+            session_options = {session["label"]: session["session_id"] for session in saved_sessions}
+            selected_label = st.selectbox(
+                "저장된 대화 선택",
+                options=list(session_options.keys()),
+                label_visibility="collapsed",
+            )
+
+            if st.button("선택한 대화 불러오기"):
+                selected_session_id = session_options[selected_label]
+                st.session_state.session_id = selected_session_id
+                st.session_state.messages = load_chat_history(selected_session_id)
+                st.rerun()
+
+        if st.button("새 대화 시작"):
+            st.session_state.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+            st.session_state.messages = [
+                {
+                    "role": "assistant",
+                    "content": "새 대화를 시작했어! 또 궁금한 걸 편하게 물어봐.",
+                }
+            ]
+            persist_chat_history(st.session_state.session_id, st.session_state.messages)
             st.rerun()
 
-    if st.button("새 대화 시작"):
-        st.session_state.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        st.session_state.messages = [
-            {
-                "role": "assistant",
-                "content": "새 대화를 시작했어! 또 궁금한 걸 편하게 물어봐.",
-            }
-        ]
-        persist_chat_history(st.session_state.session_id, st.session_state.messages)
-        st.rerun()
 
-
-retriever = None
-if jsonl_path:
-    try:
-        retriever = get_retriever(
-            data_signature,
-            str(jsonl_path),
+def prepare_retriever(jsonl_path: Path | None, data_signature: str | None):
+    if not jsonl_path:
+        st.error(
+            "지식베이스 파일을 찾지 못했어요. "
+            "`gsm_guide_rag_chunks.jsonl` 파일이 프로젝트 안에 포함되어 있는지 확인해줘."
         )
+        return None
+
+    try:
+        return get_retriever(data_signature, str(jsonl_path))
     except Exception as error:
         st.error(f"지식베이스를 준비하는 중 오류가 발생했어요: {error}")
+        return None
 
-if not jsonl_path:
-    st.error(
-        "지식베이스 파일을 찾지 못했어요. "
-        "`gsm_guide_rag_chunks.jsonl` 파일이 프로젝트 안에 포함되어 있는지 확인해줘."
+
+@st.cache_resource(show_spinner=False)
+def get_llm():
+    return ChatGoogleGenerativeAI(
+        model="gemini-3.1-flash-lite-preview",
+        temperature=0.8,
+        streaming=True,
     )
 
-if jsonl_path and not retriever:
-    st.error(
-        "지식베이스 파일은 찾았지만 임베딩 또는 벡터 저장소를 준비하지 못했어요. "
-        "배포 로그에서 구체적인 오류를 확인해줘."
+
+def build_rag_chain(retriever):
+    if not retriever:
+        return None
+
+    prompt = ChatPromptTemplate.from_messages(
+        [("system", SYSTEM_PROMPT), ("human", "{question}")]
+    )
+    return (
+        {"context": retriever | format_retrieved_docs, "question": RunnablePassthrough()}
+        | prompt
+        | get_llm()
+        | StrOutputParser()
     )
 
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-3.1-flash-lite-preview",
-    temperature=0.8,
-    streaming=True,
-)
+def render_hero() -> None:
+    st.markdown(
+        """
+        <div class="hero-wrap">
+            <div class="hero-title">🎓 GSM 길잡이 선배</div>
+            <div class="hero-subtitle">학교 생활, 프로젝트, 진로 고민까지! 선배가 다 알려줄게.</div>
+            <div class="hero-badge">
+                <span class="hero-icon">💬</span>
+                <span>안녕 후배야! 궁금한 게 있으면 편하게 물어봐. 준비된 상담 데이터와 학교 자료를 바탕으로 차근차근 답해줄게.</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-system_prompt = """당신은 광주소프트웨어마이스터고(GSM)를 너무나 사랑하는 '유쾌하고 따뜻한 3학년 선배'입니다.
+
+SYSTEM_PROMPT = """당신은 광주소프트웨어마이스터고(GSM)를 너무나 사랑하는 '유쾌하고 따뜻한 3학년 선배'입니다.
 후배가 질문을 하면, 아래 [참고 정보]를 꼼꼼히 읽은 뒤 **완벽하게 소화해서 선배의 언어로 재구성해** 대답해 주세요 너무 짧거나 방어적으로 끊지 말고
 맥락과 이유를 살려서 여유 있게 설명하세요.
 
@@ -680,37 +713,29 @@ system_prompt = """당신은 광주소프트웨어마이스터고(GSM)를 너무
 [참고 정보]
 {context}"""
 
-prompt = ChatPromptTemplate.from_messages(
-    [("system", system_prompt), ("human", "{question}")]
-)
+def main() -> None:
+    ensure_session_defaults()
+    inject_styles()
 
-rag_chain = (
-    {"context": retriever | format_retrieved_docs, "question": RunnablePassthrough()}
-    | prompt
-    | llm
-    | StrOutputParser()
-) if retriever else None
+    if "GOOGLE_API_KEY" in st.secrets:
+        os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 
-st.markdown(
-    """
-    <div class="hero-wrap">
-        <div class="hero-title">🎓 GSM 길잡이 선배</div>
-        <div class="hero-subtitle">학교 생활, 프로젝트, 진로 고민까지! 선배가 다 알려줄게.</div>
-        <div class="hero-badge">
-            <span class="hero-icon">💬</span>
-            <span>안녕 후배야! 궁금한 게 있으면 편하게 물어봐. 준비된 상담 데이터와 학교 자료를 바탕으로 차근차근 답해줄게.</span>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+    jsonl_path = find_source_jsonl()
+    data_signature = build_data_signature(jsonl_path) if jsonl_path else None
+    chunk_count = count_documents_from_jsonl(str(jsonl_path)) if jsonl_path else 0
 
-render_messages(st.session_state.messages)
+    render_sidebar(jsonl_path, chunk_count)
 
+    retriever = prepare_retriever(jsonl_path, data_signature)
+    rag_chain = build_rag_chain(retriever)
 
-user_input = render_chat_input()
+    render_hero()
+    render_messages(st.session_state.messages)
 
-if user_input:
+    user_input = render_chat_input()
+    if not user_input:
+        return
+
     st.chat_message("user").write(user_input)
     append_message("user", user_input)
 
@@ -718,3 +743,6 @@ if user_input:
         response = stream_assistant_reply(user_input, rag_chain)
 
     append_message("assistant", response)
+
+
+main()
