@@ -20,9 +20,6 @@ INDEX_DIR = DATA_DIR / "vectorstores"
 CHAT_LOG_DIR = DATA_DIR / "chat_logs"
 KNOWLEDGE_BASE_DIR = BASE_DIR / "knowledge_base"
 DEFAULT_JSONL_NAME = "gsm_guide_rag_chunks.jsonl"
-EMBEDDING_MODEL_NAME = "jhgan/ko-sroberta-multitask"
-INDEX_MANIFEST_NAME = "manifest.json"
-FAISS_INDEX_FILES = ("index.faiss", "index.pkl")
 STYLE_PATH = BASE_DIR / "styles.css"
 PROMPT_PATH = BASE_DIR / "system_prompt.txt"
 
@@ -82,38 +79,10 @@ def find_source_jsonl() -> Path | None:
 
 def data_signature(path: Path) -> str:
     digest = hashlib.sha256()
-    digest.update(EMBEDDING_MODEL_NAME.encode("utf-8"))
     digest.update(path.name.encode("utf-8"))
     digest.update(str(path.stat().st_size).encode("utf-8"))
     digest.update(hashlib.sha256(path.read_bytes()).digest())
     return digest.hexdigest()
-
-
-def vector_index_ready(index_path: Path) -> bool:
-    return index_path.is_dir() and all((index_path / filename).is_file() for filename in FAISS_INDEX_FILES)
-
-
-def index_status_text(signature: str | None) -> str:
-    if not signature:
-        return "지식베이스 파일 없음"
-    if vector_index_ready(INDEX_DIR / signature):
-        return "저장된 임베딩 인덱스를 사용 중이에요."
-    return "첫 실행이거나 데이터가 바뀌어서 임베딩 인덱스를 새로 만들 예정이에요."
-
-
-def save_index_manifest(index_path: Path, source_path: Path, signature: str, document_count: int) -> None:
-    payload = {
-        "source_file": source_path.name,
-        "source_path": str(source_path),
-        "embedding_model": EMBEDDING_MODEL_NAME,
-        "signature": signature,
-        "document_count": document_count,
-        "created_at": datetime.now().isoformat(timespec="seconds"),
-    }
-    (index_path / INDEX_MANIFEST_NAME).write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
 
 
 def row_text(row: dict) -> str:
@@ -129,7 +98,7 @@ def row_metadata(row: dict) -> dict:
 
 @st.cache_resource
 def get_embeddings():
-    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
+    return HuggingFaceEmbeddings(model_name="jhgan/ko-sroberta-multitask")
 
 
 def load_documents(jsonl_path: Path) -> list[Document]:
@@ -146,7 +115,7 @@ def load_documents(jsonl_path: Path) -> list[Document]:
 
 
 @st.cache_data(show_spinner=False)
-def count_documents(jsonl_path: str, signature: str) -> int:
+def count_documents(jsonl_path: str) -> int:
     with Path(jsonl_path).open("r", encoding="utf-8") as file:
         return sum(bool(row_text(json.loads(line))) for line in file if line.strip())
 
@@ -156,14 +125,11 @@ def get_retriever(signature: str, jsonl_path: str):
     embeddings = get_embeddings()
     index_path = INDEX_DIR / signature
 
-    if vector_index_ready(index_path):
+    if index_path.exists():
         vectorstore = FAISS.load_local(str(index_path), embeddings, allow_dangerous_deserialization=True)
     else:
-        source_path = Path(jsonl_path)
-        documents = load_documents(source_path)
-        vectorstore = FAISS.from_documents(documents, embeddings)
+        vectorstore = FAISS.from_documents(load_documents(Path(jsonl_path)), embeddings)
         vectorstore.save_local(str(index_path))
-        save_index_manifest(index_path, source_path, signature, len(documents))
 
     return vectorstore.as_retriever(search_kwargs={"k": 6})
 
@@ -257,13 +223,13 @@ def queue_chat_input() -> None:
 def render_chat_input() -> str | None:
     input_col, submit_col = st.columns([1, 0.05])
     input_col.text_input(
-        "선배에게 질문하기",
+        "궁금한 점 입력",
         key="chat_question",
-        placeholder="선배에게 질문하기...",
+        placeholder="궁금한 걸 편하게 물어봐",
         label_visibility="collapsed",
         on_change=queue_chat_input,
     )
-    submit_col.button(chr(0x2191), key="chat_submit", use_container_width=True, on_click=queue_chat_input)
+    submit_col.button("➜", key="chat_submit", use_container_width=True, on_click=queue_chat_input)
     return st.session_state.pop("pending_user_input", None)
 
 
@@ -278,7 +244,7 @@ def render_messages() -> None:
             st.write(message["content"])
 
 
-def render_sidebar(jsonl_path: Path | None, chunk_count: int, embedding_status: str) -> None:
+def render_sidebar(jsonl_path: Path | None, chunk_count: int) -> None:
     with st.sidebar:
         html('<div class="sidebar-logo">GSM</div>')
         html('<div class="sidebar-section-title">💡 이용 안내</div>')
@@ -312,7 +278,6 @@ def render_sidebar(jsonl_path: Path | None, chunk_count: int, embedding_status: 
                 <div class="info-box">
                     <strong>준비된 상담 데이터가 연결되어 있어요.</strong><br>
                     현재 {chunk_count}개의 RAG 청크를 기반으로 답변하고 있어요.<br>
-                    임베딩 상태: {embedding_status}<br>
                     데이터 파일: {jsonl_path.name}
                 </div>
                 """
@@ -419,11 +384,10 @@ def main() -> None:
 
     jsonl_path = find_source_jsonl()
     signature = data_signature(jsonl_path) if jsonl_path else None
-    chunk_count = count_documents(str(jsonl_path), signature) if jsonl_path else 0
+    chunk_count = count_documents(str(jsonl_path)) if jsonl_path else 0
     chain = build_rag_chain(prepare_retriever(jsonl_path, signature))
-    embedding_status = index_status_text(signature)
 
-    render_sidebar(jsonl_path, chunk_count, embedding_status)
+    render_sidebar(jsonl_path, chunk_count)
     render_hero()
     render_messages()
 
