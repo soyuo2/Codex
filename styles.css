@@ -242,45 +242,46 @@ html, body, [class*="css"] {
     height: 52px;
     min-height: 52px;
     padding: 0;
-    border: 1px solid #3a3a3a;
+    border: 1px solid #3f76d3;
     border-radius: 14px;
-    background: #1e1e1e !important;
-    color: #e8e8e8 !important;
+    background: linear-gradient(180deg, #4f8dff 0%, #3f76d3 100%) !important;
+    color: #ffffff !important;
     font-size: 1.35rem;
     font-weight: 700;
-    box-shadow: none;
+    box-shadow: 0 10px 20px rgba(63, 118, 211, 0.2);
     transition: background 0.15s, border-color 0.15s;
 }
 
 [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) [data-testid="stButton"] > button:hover {
-    background: #2c2c2c !important;
-    border-color: #555 !important;
+    background: linear-gradient(180deg, #5a96ff 0%, #467edb 100%) !important;
+    border-color: #467edb !important;
     color: #ffffff !important;
 }
 
 [data-testid="stHorizontalBlock"]:has([data-testid="stTextInput"]) [data-testid="stButton"] > button:active {
-    background: #383838 !important;
+    background: linear-gradient(180deg, #4279db 0%, #3768ba 100%) !important;
 }
 
 .stButton > button {
     width: 100%;
     border-radius: 12px;
-    border: 1px solid #3a3a3a;
+    border: 1px solid #d6e1f2;
     min-height: 46px;
     font-weight: 600;
     font-size: 0.95rem;
-    background: #1e1e1e !important;
-    color: #e8e8e8 !important;
+    background: #ffffff !important;
+    color: #24324b !important;
     letter-spacing: -0.01em;
+    box-shadow: 0 8px 20px rgba(43, 63, 104, 0.06);
     transition: background 0.15s, border-color 0.15s;
 }
 
 .stButton > button:hover {
-    background: #2c2c2c !important;
-    border-color: #555 !important;
-    color: #ffffff !important;
+    background: #eef4ff !important;
+    border-color: #bfd2f1 !important;
+    color: #1f2a44 !important;
 }
 
 .stButton > button:active {
-    background: #383838 !important;
+    background: #e3edff !important;
 }
