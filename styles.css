@@ -197,104 +197,66 @@ html, body, [class*="css"] {
     color: #1f2a44 !important;
 }
 
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) {
+[data-testid="stChatInput"] {
     max-width: 980px;
-    margin: 1.6rem auto 0 auto;
-    padding: 0.95rem 1rem 0.85rem 1rem;
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(208, 216, 228, 0.95);
-    border-radius: 32px;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
-}
-
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) [data-testid="stTextArea"] {
-    margin-bottom: 0.15rem;
-}
-
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) [data-testid="stTextArea"] > div,
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) [data-testid="stTextArea"] [data-baseweb="textarea"] {
+    margin: 1.5rem auto 0 auto;
     background: transparent !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    outline: 0 !important;
 }
 
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) [data-testid="stTextArea"] textarea {
-    min-height: 88px !important;
-    padding: 0.35rem 0.2rem 0.1rem 0.2rem !important;
+[data-testid="stChatInput"] > div {
+    background: rgba(255, 255, 255, 0.96) !important;
+    border: 1px solid rgba(208, 216, 228, 0.95) !important;
+    border-radius: 28px !important;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08) !important;
+    padding: 0.35rem 0.4rem 0.35rem 0.7rem !important;
+}
+
+[data-testid="stChatInput"] textarea {
+    min-height: 52px !important;
+    max-height: 180px !important;
+    padding: 0.7rem 0.35rem !important;
     border: 0 !important;
     outline: 0 !important;
     box-shadow: none !important;
     background: transparent !important;
     color: #1f2a44 !important;
-    font-size: 1.05rem !important;
+    font-size: 1.02rem !important;
     font-weight: 400 !important;
-    line-height: 1.5 !important;
-    resize: none !important;
+    line-height: 1.45 !important;
 }
 
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) [data-testid="stTextArea"] textarea::placeholder {
+[data-testid="stChatInput"] textarea::placeholder {
     color: #9aa4b2 !important;
     opacity: 1 !important;
 }
 
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) [data-testid="stTextArea"] label {
-    display: none !important;
-}
-
-.chat-input-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    min-height: 44px;
-    color: #1570ef;
-    padding-left: 0.15rem;
-    font-size: 0.98rem;
-    font-weight: 500;
-}
-
-.chat-input-plus {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    color: #111827;
-    font-size: 2rem;
-    line-height: 1;
-}
-
-.chat-input-expand,
-.chat-input-caret {
-    color: #1570ef;
-}
-
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) [data-testid="stButton"] > button {
-    width: 50px !important;
-    min-width: 50px !important;
-    height: 50px !important;
-    min-height: 50px !important;
-    padding: 0;
+[data-testid="stChatInput"] button {
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
     border: 0 !important;
-    border-radius: 999px;
+    border-radius: 999px !important;
     background: #111111 !important;
     color: #ffffff !important;
-    font-size: 1.1rem;
-    font-weight: 600;
-    line-height: 1;
-    box-shadow: none;
-    transition: background 0.15s ease, transform 0.15s ease;
+    box-shadow: none !important;
+    transition: background 0.15s ease, transform 0.15s ease !important;
 }
 
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) [data-testid="stButton"] > button:hover {
+[data-testid="stChatInput"] button:hover {
     background: #000000 !important;
     color: #ffffff !important;
     transform: translateY(-1px);
 }
 
-[data-testid="stVerticalBlock"]:has(.chat-input-toolbar) [data-testid="stButton"] > button:active {
+[data-testid="stChatInput"] button:active {
     background: #1f1f1f !important;
     transform: translateY(0);
+}
+
+[data-testid="stChatInput"] button svg {
+    fill: #ffffff !important;
+    color: #ffffff !important;
 }
 
 .stButton > button {
