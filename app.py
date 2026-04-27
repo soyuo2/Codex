@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -45,6 +46,8 @@ DEFAULT_GREETING = (
     "안녕 후배야! 혹시 학교 생활이나 프로젝트, 진로 고민이 있으면 편하게 물어봐. "
     "준비된 상담 데이터와 학교 자료를 바탕으로 선배처럼 친근하게 답해줄게."
 )
+MODEL_NAME = "gemini-3.1-flash-lite-preview"
+RETRY_DELAYS = (1.2, 2.4)
 
 for directory in (DATA_DIR, INDEX_DIR, CHAT_LOG_DIR, KNOWLEDGE_BASE_DIR):
     directory.mkdir(parents=True, exist_ok=True)
@@ -323,7 +326,7 @@ def prepare_retriever(jsonl_path: Path | None, signature: str | None):
 @st.cache_resource(show_spinner=False)
 def get_llm():
     return ChatGoogleGenerativeAI(
-        model="gemini-3.1-flash-lite-preview",
+        model=MODEL_NAME,
         temperature=0.8,
         streaming=True,
     )
@@ -344,18 +347,62 @@ def build_rag_chain(retriever):
     )
 
 
-def stream_reply(question: str, chain) -> str:
-    if not chain:
+def is_transient_model_error(error: Exception) -> bool:
+    message = str(error).lower()
+    transient_markers = (
+        "503",
+        "unavailable",
+        "high demand",
+        "temporarily",
+        "resource exhausted",
+        "rate limit",
+        "deadline exceeded",
+        "timeout",
+    )
+    return any(marker in message for marker in transient_markers)
+
+
+def stream_chain_response(chain, question: str, placeholder) -> str:
+    chunks = []
+    for chunk in chain.stream(question):
+        chunks.append(chunk)
+        placeholder.markdown("".join(chunks))
+    return "".join(chunks)
+
+
+def stream_reply(question: str, retriever) -> str:
+    if not retriever:
         response = "지금은 답변에 사용할 상담 데이터가 준비되지 않았어. 잠시 뒤 다시 시도해줘."
         st.write(response)
         return response
 
-    try:
-        return st.write_stream(chain.stream(question))
-    except Exception as error:
-        response = f"답변을 생성하는 중 오류가 발생했어: {error}"
-        st.error(response)
-        return response
+    status_placeholder = st.empty()
+    response_placeholder = st.empty()
+    chain = build_rag_chain(retriever)
+
+    for attempt, delay in enumerate((0.0, *RETRY_DELAYS), start=1):
+        if delay:
+            status_placeholder.caption("지금 요청이 몰려서 같은 모델로 다시 시도하고 있어. 잠깐만 기다려줘.")
+            time.sleep(delay)
+
+        try:
+            response = stream_chain_response(chain, question, response_placeholder)
+            status_placeholder.empty()
+            return response
+        except Exception as error:
+            response_placeholder.empty()
+            if not is_transient_model_error(error):
+                status_placeholder.empty()
+                response = "답변을 생성하는 중 오류가 발생했어. 잠시 뒤 다시 시도해줘."
+                st.error(response)
+                return response
+
+            status_placeholder.caption("지금 요청이 많아서 답변을 다시 준비하고 있어.")
+
+    status_placeholder.empty()
+    response = "지금 답변 요청이 몰려서 잠깐 바쁜 상태야. 잠시 후 다시 질문해주면 바로 이어서 도와줄게."
+    st.error(response)
+    return response
 
 
 def main() -> None:
@@ -368,7 +415,7 @@ def main() -> None:
     jsonl_path = find_source_jsonl()
     signature = data_signature(jsonl_path) if jsonl_path else None
     chunk_count = count_documents(str(jsonl_path)) if jsonl_path else 0
-    chain = build_rag_chain(prepare_retriever(jsonl_path, signature))
+    retriever = prepare_retriever(jsonl_path, signature)
 
     render_sidebar(jsonl_path, chunk_count)
     render_hero()
@@ -378,7 +425,7 @@ def main() -> None:
         st.chat_message("user").write(user_input)
         append_message("user", user_input)
         with st.chat_message("assistant"):
-            append_message("assistant", stream_reply(user_input, chain))
+            append_message("assistant", stream_reply(user_input, retriever))
 
 
 main()
