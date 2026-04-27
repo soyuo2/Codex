@@ -221,15 +221,28 @@ def queue_chat_input() -> None:
 
 
 def render_chat_input() -> str | None:
-    input_col, submit_col = st.columns([1, 0.05])
-    input_col.text_input(
-        "궁금한 점 입력",
-        key="chat_question",
-        placeholder="궁금한 걸 편하게 물어봐",
-        label_visibility="collapsed",
-        on_change=queue_chat_input,
-    )
-    submit_col.button("➜", key="chat_submit", use_container_width=True, on_click=queue_chat_input)
+    with st.container():
+        st.text_area(
+            "메시지 입력",
+            key="chat_question",
+            placeholder="무엇이든 물어보세요",
+            label_visibility="collapsed",
+            height=96,
+        )
+
+        toolbar_col, spacer_col, submit_col = st.columns([0.28, 0.6, 0.12])
+        with toolbar_col:
+            html(
+                """
+                <div class="chat-input-toolbar">
+                    <span class="chat-input-plus">+</span>
+                    <span class="chat-input-expand">확장</span>
+                    <span class="chat-input-caret">⌄</span>
+                </div>
+                """
+            )
+
+        submit_col.button("↑", key="chat_submit", use_container_width=True, on_click=queue_chat_input)
     return st.session_state.pop("pending_user_input", None)
 
 
