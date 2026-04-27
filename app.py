@@ -205,7 +205,6 @@ def list_saved_sessions() -> list[dict]:
 
 def init_session() -> None:
     st.session_state.setdefault("session_id", datetime.now().strftime("%Y%m%d_%H%M%S"))
-    st.session_state.setdefault("chat_question", "")
 
     if "messages" not in st.session_state:
         st.session_state.messages = load_chat_history(st.session_state.session_id) or [
@@ -213,37 +212,8 @@ def init_session() -> None:
         ]
 
 
-def queue_chat_input() -> None:
-    question = st.session_state.get("chat_question", "").strip()
-    if question:
-        st.session_state.pending_user_input = question
-        st.session_state.chat_question = ""
-
-
 def render_chat_input() -> str | None:
-    with st.container():
-        st.text_area(
-            "메시지 입력",
-            key="chat_question",
-            placeholder="무엇이든 물어보세요",
-            label_visibility="collapsed",
-            height=96,
-        )
-
-        toolbar_col, spacer_col, submit_col = st.columns([0.28, 0.6, 0.12])
-        with toolbar_col:
-            html(
-                """
-                <div class="chat-input-toolbar">
-                    <span class="chat-input-plus">+</span>
-                    <span class="chat-input-expand">확장</span>
-                    <span class="chat-input-caret">⌄</span>
-                </div>
-                """
-            )
-
-        submit_col.button("↑", key="chat_submit", use_container_width=True, on_click=queue_chat_input)
-    return st.session_state.pop("pending_user_input", None)
+    return st.chat_input("무엇이든 물어보세요")
 
 
 def append_message(role: str, content: str) -> None:
