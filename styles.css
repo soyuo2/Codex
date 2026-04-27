@@ -215,10 +215,11 @@ html, body, [class*="css"] {
     min-height: 52px !important;
     max-height: 180px !important;
     padding: 0.7rem 0.35rem !important;
+    border-radius: 20px !important;
     border: 0 !important;
     outline: 0 !important;
     box-shadow: none !important;
-    background: transparent !important;
+    background: #eef2f8 !important;
     color: #1f2a44 !important;
     font-size: 1.02rem !important;
     font-weight: 400 !important;
